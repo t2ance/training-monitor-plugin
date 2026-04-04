@@ -68,6 +68,7 @@ Built-in skills:
   [OK] grpo-monitor
   [OK] distributed-monitor
   [OK] k8s-monitor
+  [OK] wandb-monitor
 
 External skills:
   [OK/MISSING] wandb-primary (wandb/skills)
@@ -84,7 +85,7 @@ Authentication:
 =======================
 Features available:
   [OK] Core monitoring (single GPU PyTorch)
-  [OK/DEGRADED] W&B monitoring — requires wandb-primary skill + wandb package + wandb login
+  [OK/DEGRADED] W&B monitoring (wandb-monitor) — requires wandb-primary skill + wandb package + wandb login
   [OK/DEGRADED] K8s monitoring — requires kubectl
   [OK] GRPO monitoring (knowledge only, no external deps)
   [OK] Distributed monitoring (knowledge only, no external deps)

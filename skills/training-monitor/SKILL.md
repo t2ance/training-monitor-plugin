@@ -97,8 +97,9 @@ For specialized training types or infrastructure, the orchestrator (or dispatche
 | `grpo-monitor` | Training uses GRPO, PPO, or other RL algorithms |
 | `distributed-monitor` | Training uses multiple GPUs or multiple processes |
 | `k8s-monitor` | Job runs on Kubernetes |
+| `wandb-monitor` | Job logs to Weights & Biases (requires `wandb-primary` from `wandb/skills`) |
 
-For W&B monitoring, install the `wandb/skills` package (`npx skills add wandb/skills`). Use `monitor-doctor` to verify all dependencies.
+Use `monitor-doctor` to verify all dependencies.
 
 ## Rules
 

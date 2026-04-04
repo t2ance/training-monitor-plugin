@@ -22,6 +22,7 @@ git clone https://github.com/t2ance/training-monitor-plugin.git ~/plugins/traini
 | `grpo-monitor` | GRPO/RL training: reward, KL, entropy, generation quality, phase time balance. | Yes |
 | `distributed-monitor` | Multi-GPU/multi-process: NCCL, process hierarchy, straggler detection. | Yes |
 | `k8s-monitor` | Kubernetes: kubectl collection, pod anomalies, scheduling escalation ladder. | Yes |
+| `wandb-monitor` | W&B monitoring: heartbeat stall detection, metric key variations, health thresholds, run comparison. Requires `wandb-primary` skill. | Yes |
 | `monitor-doctor` | Dependency checker. Verifies external plugins, CLI tools, and Python packages. | Yes |
 
 ## Agents
