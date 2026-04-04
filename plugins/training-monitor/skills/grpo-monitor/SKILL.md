@@ -57,7 +57,15 @@ In addition to general metric anomalies (NaN, loss=0, gradient explosion):
 3. Temperature too low — no diversity, all samples identical, advantages all zero, no learning signal.
 4. KL penalty too high �� model cannot deviate from reference, stuck at initial policy.
 
-**Action:** Check actual generated text (not just metrics). Read a few samples from the log. Is the model producing coherent, diverse outputs? If collapsed, this likely requires a config change (temperature, KL coef, reward function) — use `team-decision-review` before changing.
+**Action:** Check actual generated text (not just metrics). Try these methods in order to find generated samples:
+1. Training log — grep for sample outputs or completions
+2. W&B tables or artifacts (if using W&B)
+3. A samples/outputs directory near the checkpoint path
+4. Framework-specific sample logging flags (e.g., VERL's logging config, TRL's `log_completions`, OpenRLHF's sample saving)
+
+If no generated text is available through any method, report this as a monitoring limitation and recommend the user enable sample logging for future sessions.
+
+Is the model producing coherent, diverse outputs? If collapsed, this likely requires a config change (temperature, KL coef, reward function) — use `team-decision-review` before changing.
 
 ## RL Overfitting Response
 
