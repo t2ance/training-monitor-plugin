@@ -1,118 +1,105 @@
 ---
 name: monitor-doctor
-description: Interactive setup wizard for the training-monitor plugin. Discovers the user's training environment, checks dependencies, offers to install missing ones, and reports available monitoring capabilities.
+description: Interactive setup wizard for the training-monitor plugin. Goal-driven — the agent determines which dependencies are needed by checking project context and asking the user only when the context is ambiguous. Installs missing dependencies and reports available capabilities.
 ---
 
 # Monitor Doctor
 
-Interactive setup wizard for the training-monitor plugin. Guides the user through environment discovery, dependency checking, and installation.
+Set up the training-monitor plugin for the user's environment. The goal is to determine which domain skills and external dependencies are needed, install what is missing, and report available capabilities.
+
+## Goal
+
+Determine which entries in the Dependency Registry below apply to the user's situation. For each applicable entry, check if its dependencies are installed. Offer to install what is missing. Report the final capability state.
+
+## Strategy
+
+**Do NOT follow a fixed questionnaire.** Instead:
+
+1. **Check context first.** Read the project directory, look at running processes, check installed packages. Many answers are already available without asking.
+2. **Ask only when ambiguous.** If the context makes the answer clear, skip the question. If the user already stated their setup (e.g., "I'm running GRPO on K8s with W&B"), extract the answers directly — do not re-ask.
+3. **Ask efficiently.** If multiple things are unclear, batch them into a single AskUserQuestion call. Do not ask one question at a time if you can ask several at once.
+4. **Be adaptive.** If the user's first message already provides enough information to determine all dependencies, go straight to checking and installing. Zero questions is a valid outcome.
+
+### Context Signals to Check
+
+| Signal | What it tells you | How to check |
+|--------|------------------|-------------|
+| RL/GRPO/PPO keywords in config or code | GRPO/RL training → need `grpo-monitor` | `grep -ri "grpo\|ppo\|rloo\|reward\|kl_loss" <project_dir>` |
+| Multiple GPU processes or torchrun/deepspeed in command | Distributed training → need `distributed-monitor` | `ps aux \| grep -E "torchrun\|deepspeed\|accelerate"`, `nvidia-smi` showing multiple GPUs used |
+| K8s YAML files, kubectl available, namespace references | Kubernetes infra → need `k8s-monitor` | `ls *.yaml *k8s* 2>/dev/null`, `kubectl version --client 2>/dev/null` |
+| wandb imported in code, wandb dir exists, WANDB_API_KEY set | W&B tracking → need `wandb-monitor` | `grep -ri "import wandb\|wandb.init" <project_dir>`, `ls wandb/ 2>/dev/null`, `echo $WANDB_API_KEY` |
+| tensorboard logs, SummaryWriter in code | TensorBoard tracking (no dedicated skill yet) | `grep -ri "SummaryWriter\|tensorboard" <project_dir>`, `ls runs/ tb_logs/ 2>/dev/null` |
+
+## Dependency Registry
+
+This is the complete list of domain skills and their external dependencies. The agent uses this registry to determine what to check and install.
+
+| Skill | What it provides | External dependencies | Install commands |
+|-------|-----------------|----------------------|-----------------|
+| `training-monitor` | Core monitoring orchestrator | `nvidia-smi` | (pre-installed on GPU machines) |
+| `grpo-monitor` | RL metrics, generation quality, phase time | none | — |
+| `distributed-monitor` | NCCL diagnostics, process hierarchy, stragglers | none | — |
+| `k8s-monitor` | Pod anomalies, scheduling escalation | `kubectl` with cluster access | `curl -LO https://dl.k8s.io/release/$(curl -sL https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl && chmod +x kubectl && mv kubectl ~/.local/bin/` |
+| `wandb-monitor` | Heartbeat stall detection, metric keys, health thresholds | `wandb-primary` skill + `wandb` Python package + authentication | `npx skills add wandb/skills` then `pip install wandb` then `wandb login` |
 
 ## Procedure
 
-### Phase 1: Discover Environment
+### 1. Determine Applicable Skills
 
-Use AskUserQuestion to ask these questions in a SINGLE round (all at once):
+Using the context signals and any information the user has provided, determine which rows in the Dependency Registry apply. If anything is ambiguous, ask the user using AskUserQuestion.
 
-**Question 1 — Training type** (single select):
-- Standard PyTorch (SFT, pretraining, fine-tuning)
-- GRPO / RL (PPO, GRPO, RLOO, DPO with online generation)
+### 2. Check Dependencies
 
-**Question 2 — Infrastructure** (single select):
-- Local single GPU
-- Local multi-GPU / distributed
-- Kubernetes
+For each applicable row, check whether its external dependencies are installed. Run the check commands and collect results into three categories:
+- **Installed**: dependency is present and working
+- **Missing**: dependency is absent but needed
+- **Not needed**: dependency is for a skill that does not apply
 
-**Question 3 — Metric tracker** (multi-select, user may use multiple):
-- None (log files only)
-- Weights & Biases
-- TensorBoard
+### 3. Offer Installation
 
-Store the answers as the user's **environment profile**. This determines which skills and dependencies are needed.
+If there are missing dependencies, present them to the user via AskUserQuestion (multi-select). Each option should show the dependency name and its install command. The user selects which ones to install.
 
-### Phase 2: Determine Requirements
+For each selected dependency:
+- Execute the install command
+- Verify it succeeded
+- If it fails, report the error and continue
 
-Based on the environment profile, build a requirements table:
+For each skipped dependency:
+- Mark the corresponding capability as DEGRADED
+- Explain what the user will miss
 
-| Environment answer | Required skill | External dependency |
-|-------------------|---------------|-------------------|
-| Any | `training-monitor` (core) | `nvidia-smi` |
-| GRPO / RL | `grpo-monitor` | none |
-| Local multi-GPU / distributed | `distributed-monitor` | none |
-| Kubernetes | `k8s-monitor` | `kubectl` with cluster access |
-| Weights & Biases | `wandb-monitor` | `wandb-primary` skill (`npx skills add wandb/skills`) + `wandb` Python package + `wandb login` |
+### 4. Report Capabilities
 
-Skills from this plugin are always available (built-in). Only check external dependencies.
-
-### Phase 3: Check and Install
-
-For each external dependency in the requirements table:
-
-1. **Check** if it is already installed (run the check command).
-2. **If installed**: mark as OK, show version.
-3. **If missing**: collect into a list for the next step.
-
-If there are missing dependencies, use AskUserQuestion with **multi-select**:
-
-**Question — Which dependencies do you want to install?**
-
-List each missing dependency as an option with its install command in the description. For example:
-- "wandb Python package" — `pip install wandb`
-- "wandb-primary skill" — `npx skills add wandb/skills`
-- "wandb authentication" — will run `wandb login` (requires API key)
-
-The user selects which ones to install. For each selected:
-- Execute the install command.
-- Verify it succeeded.
-- If it fails, report the error and move on (do not block other installs).
-
-For each NOT selected:
-- Mark the corresponding feature as DEGRADED and explain what the user will miss.
-
-### Phase 4: Capability Report
-
-After all installations complete (or are skipped), present the final capability report:
+Present the final state:
 
 ```
-Training Monitor Setup Complete
+Monitor Doctor — Setup Complete
 ================================
+Environment: [detected/stated training setup summary]
 
-Environment: [training type] on [infrastructure] with [metric tracker]
+Skills:
+  [OK]  training-monitor (core)
+  [OK/--]  grpo-monitor
+  [OK/--]  distributed-monitor
+  [OK/--]  k8s-monitor
+  [OK/--]  wandb-monitor
 
-Skills loaded:
-  [OK] training-monitor (core orchestrator)
-  [OK/--] grpo-monitor           (loaded if RL training)
-  [OK/--] distributed-monitor    (loaded if multi-GPU)
-  [OK/--] k8s-monitor            (loaded if K8s)
-  [OK/--] wandb-monitor          (loaded if W&B)
-
-External dependencies:
-  [OK/MISSING] nvidia-smi
+Dependencies:
+  [OK/MISSING/--] nvidia-smi
   [OK/MISSING/--] kubectl
-  [OK/MISSING/--] wandb package
   [OK/MISSING/--] wandb-primary skill
-  [OK/MISSING/--] wandb authentication
+  [OK/MISSING/--] wandb package
+  [OK/MISSING/--] wandb auth
 
-Monitoring capabilities:
-  [OK] Prediction-first monitoring flow
-  [OK] GPU power and memory monitoring
-  [OK] Anomaly detection (Class A-H)
-  [OK] Sub-agent parallel job monitoring
-  [OK/DEGRADED/OFF] GRPO metric monitoring — [reason if degraded]
-  [OK/DEGRADED/OFF] Distributed stall detection — [reason if degraded]
-  [OK/DEGRADED/OFF] K8s pod monitoring — [reason if degraded]
-  [OK/DEGRADED/OFF] W&B heartbeat monitoring — [reason if degraded]
-  [OK/DEGRADED/OFF] W&B cross-source validation — [reason if degraded]
-
+Capabilities:
+  [OK/DEGRADED/OFF] [capability] — [reason if not OK]
+  ...
 ================================
 ```
 
-If everything is OK: "Ready to monitor. Use `training-monitor` to start."
+### 5. Save Profile (optional)
 
-If anything is DEGRADED: "Some features are limited. You can re-run `monitor-doctor` anytime to install missing dependencies."
-
-### Phase 5: Save Environment Profile (optional)
-
-If the user's project has a `.claude/` directory, offer to save the environment profile so that `training-monitor` can automatically load the right domain skills without asking again:
+If the project has a `.claude/` directory, offer to save the environment profile:
 
 ```json
 {
@@ -123,7 +110,4 @@ If the user's project has a `.claude/` directory, offer to save the environment 
 }
 ```
 
-Use AskUserQuestion:
-- "Save this environment profile for future monitoring sessions?" — Yes / No
-
-If yes, write to `.claude/training-monitor-profile.json` in the project directory.
+This allows `training-monitor` to automatically load the right domain skills in future sessions.
