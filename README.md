@@ -4,20 +4,15 @@ Prediction-first autonomous monitoring for ML/DL training jobs. Write expectatio
 
 ## Installation
 
-### Via Marketplace (recommended)
+### Via CLI (recommended)
 
 ```bash
-# 1. Ensure GitHub auth (private repo)
-gh auth login
-
-# 2. Add the marketplace
+# Add the marketplace and install
 claude plugin marketplace add t2ance/training-monitor-plugin
-
-# 3. Install the plugin
 claude plugin install training-monitor@training-monitor
 ```
 
-### Via settings.json (manual)
+### Via settings.json
 
 Add these to `~/.claude/settings.json`:
 
@@ -37,7 +32,7 @@ Add these to `~/.claude/settings.json`:
 }
 ```
 
-Restart Claude Code. The plugin will be pulled automatically.
+Restart Claude Code to pull the plugin.
 
 ### Setup
 
