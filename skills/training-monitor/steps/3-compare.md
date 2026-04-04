@@ -32,7 +32,7 @@ Multiple data sources should agree. If they disagree, one of them is wrong — f
 | Process "alive" (ps) | GPU power (nvidia-smi) | Zombie process or deadlock |
 | Log says "training" | GPU utilization <10% | Process waiting on I/O, network, or deadlocked |
 
-If using an external metric tracker (W&B, TensorBoard, etc.), load its corresponding plugin for tracker-specific cross-validation rules.
+If using W&B, load the `wandb-primary` skill (from `wandb/skills`) for W&B-specific cross-validation and API access patterns.
 
 ## Trust Hierarchy
 

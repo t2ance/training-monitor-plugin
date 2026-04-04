@@ -98,7 +98,7 @@ For specialized training types or infrastructure, the orchestrator (or dispatche
 | `distributed-monitor` | Training uses multiple GPUs or multiple processes |
 | `k8s-monitor` | Job runs on Kubernetes |
 
-For external metric trackers (W&B, TensorBoard, MLflow), check if a corresponding third-party plugin is installed. Use `monitor-doctor` to verify dependencies.
+For W&B monitoring, install the `wandb/skills` package (`npx skills add wandb/skills`). Use `monitor-doctor` to verify all dependencies.
 
 ## Rules
 

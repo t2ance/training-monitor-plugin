@@ -13,7 +13,7 @@ You are monitoring a single training job. Execute the following steps and return
 You will be given:
 - Job identifiers: name, PID, log file path, checkpoint directory
 - Predictions: the orchestrator's predictions for this job (expected step, GPU power, memory, metrics)
-- Domain context: training type (standard / RL / pretraining), infrastructure (local / K8s), metric tracker (none / W&B)
+- Domain context: training type (standard / RL / pretraining), infrastructure (local / K8s), metric tracker (none / W&B via `wandb-primary` skill)
 
 ## Procedure
 

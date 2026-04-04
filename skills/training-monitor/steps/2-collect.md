@@ -29,4 +29,4 @@ df -h <checkpoint_dir> | tail -1
 - Run all commands in parallel when checking multiple jobs.
 - For distributed training, load the `distributed-monitor` skill for multi-process PID management.
 - For K8s jobs, load the `k8s-monitor` skill for kubectl-based collection.
-- For W&B integration, check if a W&B monitoring plugin is installed (use `monitor-doctor` to verify).
+- For W&B integration, the `wandb-primary` skill from `wandb/skills` is required. Use `monitor-doctor` to verify.
