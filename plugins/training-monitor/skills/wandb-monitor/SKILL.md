@@ -1,11 +1,13 @@
 ---
 name: wandb-monitor
-description: Monitoring guidance for training jobs that log to Weights & Biases. Covers heartbeat stall detection, metric key variations, cross-source validation, health thresholds, and run comparison. Depends on wandb-primary skill (wandb/skills) for API access. Use standalone or alongside training-monitor.
+description: Heuristics for monitoring training via Weights & Biases. Heartbeat patterns, metric key variations, cross-source validation, health thresholds. Reference knowledge, not rules. Depends on wandb-primary skill (wandb/skills) for API access.
 ---
 
 # W&B Training Monitor
 
-Monitoring guidance for training jobs that log to Weights & Biases. This skill provides the **monitoring logic** (what to check, what thresholds mean, how to interpret results). For W&B API patterns (how to call the SDK), it depends on the `wandb-primary` skill from `wandb/skills`.
+Heuristics for monitoring training jobs via Weights & Biases. This skill provides **reference knowledge** about W&B-specific patterns (heartbeat behavior, metric key naming, cross-source validation). For W&B API patterns (how to call the SDK), it depends on the `wandb-primary` skill from `wandb/skills`.
+
+Use these heuristics to inform your reasoning about W&B data, not as rigid rules.
 
 **Dependency**: `wandb-primary` skill must be installed (`npx skills add wandb/skills`) and `wandb` Python package must be available with valid authentication.
 

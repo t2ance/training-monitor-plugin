@@ -1,13 +1,15 @@
 ---
 name: grpo-monitor
-description: Monitoring guidance for GRPO, PPO, and other RL training. Covers RL-specific metrics, generation phase resource usage, and RL anomaly patterns. Use standalone or alongside training-monitor.
+description: Heuristics for monitoring GRPO, PPO, and other RL training. Common patterns, typical indicators, known failure modes. Reference knowledge, not rules.
 ---
 
 # GRPO / RL Training Monitor
 
-Monitoring guidance for training jobs that use GRPO, PPO, RLOO, or other RL algorithms. This skill can be used standalone or loaded alongside `training-monitor` for domain-specific coverage.
+Heuristics for monitoring RL training jobs (GRPO, PPO, RLOO, etc.). This skill provides **reference knowledge** about common patterns in RL training — not rules or checklists. Use it to inform your reasoning, not as a substitute for reasoning.
 
-## RL Metrics
+When used alongside `training-monitor`, the monitor agent derives its own judgment criteria from the training artifacts. This skill tells you what RL practitioners commonly look at and what failure modes are known — but the agent must judge whether these apply to the specific training at hand.
+
+## Common RL Metrics (Heuristics)
 
 - **Reward trend**: is mean reward increasing over steps? Flat for 5+ steps after warmup = stalled.
 - **Reward distribution**: are rewards binary (0/1) or continuous? If binary, what is the positive ratio?

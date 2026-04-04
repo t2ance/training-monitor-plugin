@@ -1,11 +1,11 @@
 ---
 name: k8s-monitor
-description: Monitoring guidance for training jobs on Kubernetes. Covers kubectl evidence collection, pod anomalies, scheduling failures, and the escalation ladder. Use standalone or alongside training-monitor.
+description: Heuristics for monitoring training jobs on Kubernetes. Common patterns, pod anomalies, scheduling failures, escalation ladder. Reference knowledge, not rules.
 ---
 
 # Kubernetes Training Monitor
 
-Monitoring guidance for training jobs running on Kubernetes. This skill can be used standalone or loaded alongside `training-monitor` for domain-specific coverage.
+Heuristics for monitoring training jobs on Kubernetes. This skill provides **reference knowledge** about common K8s patterns and failure modes — not rules or checklists. Use it to inform your reasoning about what to check in K8s environments.
 
 ## K8s Evidence Collection
 

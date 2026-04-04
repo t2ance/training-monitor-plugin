@@ -1,11 +1,11 @@
 ---
 name: distributed-monitor
-description: Monitoring guidance for multi-GPU and multi-process distributed training (DDP, FSDP, DeepSpeed, Megatron, Ray). Covers process hierarchy, NCCL diagnostics, and distributed anomalies. Use standalone or alongside training-monitor.
+description: Heuristics for monitoring multi-GPU and multi-process distributed training. Common patterns, NCCL diagnostics, known failure modes. Reference knowledge, not rules.
 ---
 
 # Distributed Training Monitor
 
-Monitoring guidance for training jobs that use multiple GPUs or multiple processes, regardless of framework (DDP, FSDP, DeepSpeed ZeRO, Megatron, Ray, etc.). This skill can be used standalone or loaded alongside `training-monitor` for domain-specific coverage.
+Heuristics for monitoring distributed training jobs (DDP, FSDP, DeepSpeed, Megatron, Ray, etc.). This skill provides **reference knowledge** about common distributed training patterns — not rules or checklists. Use it to inform your reasoning about what to check and what failure modes are known.
 
 ## Multi-Process Evidence Collection
 

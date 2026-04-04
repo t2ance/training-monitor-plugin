@@ -1,51 +1,67 @@
 # Step 4: Check Training Metrics
 
-## Hypothesis Testing Methodology
+## Goal
 
-The goal of this step is to answer: **is this training making productive progress toward its objective?**
+Answer: **is this training making productive progress toward its objective?**
 
-This is NOT a fixed checklist. The relevant metrics depend on what the training is trying to achieve. You must first understand the training's objective, then identify the right metrics to evaluate progress.
+## How to Derive Judgment Criteria
 
-### How to Apply
+Do NOT use a fixed checklist. The relevant metrics depend on what THIS training is trying to achieve. Derive the criteria from the training's own artifacts.
 
-1. **Identify the training objective.** What is this training trying to optimize? Loss? Reward? Output quality? A specific behavior (e.g., longer outputs, tool use accuracy)?
+### 1. Read the training artifacts
 
-2. **Identify the key progress indicator.** This is the metric that most directly measures whether the objective is being achieved. Examples:
-   - SFT/pretraining: loss decreasing
-   - GRPO/RL: reward increasing, or a specific behavior metric (e.g., output length, pass rate)
-   - Alignment: preference win rate improving
-   - The user may specify a custom indicator — always ask or check the training config
+- Training config (YAML, JSON, Python script, command line args)
+- What loss function is defined? What optimizer?
+- What metrics are actually being logged? (read the log output)
+- Is there a reward function? An evaluation script?
 
-3. **Establish the baseline.** What would this metric look like if the model were NOT learning? (e.g., random baseline loss, zero reward, random output length)
+### 2. Identify the key progress indicator
 
-4. **Evaluate progress.** Is the key indicator moving in the right direction, away from the baseline? Is it statistically distinguishable from random?
+The metric that most directly measures whether the training objective is being achieved. This varies by training type:
 
-5. **Assess status:**
-   - **HEALTHY**: key indicator is clearly moving in the right direction, away from baseline
-   - **WARNING**: key indicator is flat, unclear, or still at baseline level after sufficient steps
-   - **CRITICAL**: key indicator is moving in the WRONG direction, or NaN/Inf/collapsed
+- It might be loss (SFT, pretraining)
+- It might be reward (RL)
+- It might be a behavior metric (output length, pass rate, ELO rating)
+- It might be equilibrium (GAN — bounded oscillation, not monotonic decrease)
+- It might be something the user specified that isn't obvious from config
+- If per-job state exists from a previous session, use the previously derived indicator unless something changed
 
-**"Process alive + GPU busy" is never evidence of progress. It only means the job has not crashed.**
+**State your choice explicitly and explain WHY.**
 
-## General Metrics (All Training Types)
+### 3. Establish a baseline
 
-These apply regardless of the training objective:
+What would this metric look like if the model were NOT learning?
+
+- For cross-entropy loss: random baseline = -ln(1/num_classes) or ln(2) for binary
+- For reward: zero or random-policy reward
+- For output length: initial model's average output length
+- For custom metrics: reason about what "no learning" means for this metric
+
+### 4. Evaluate progress
+
+- Is the key indicator moving away from the baseline in the expected direction?
+- Is this distinguishable from noise? (compare rolling averages, not individual steps)
+- Has there been sufficient training time? (don't judge too early — but also don't wait forever)
+
+### 5. Assess status with articulated reasoning
+
+Write your reasoning, not just a label:
+
+- "The key indicator for this training is [X] because [reason]. The baseline is [Y]. After [N] steps, [X] has moved from [initial] to [current], which is [above/below/at] baseline. This [does/does not] show productive progress because [reasoning]."
+
+## General Observations (All Training Types)
+
+These are useful signals regardless of what the key indicator is:
 
 - **Step time consistency**: if step N+1 takes >1.5x step N, investigate (variable sequence lengths, data loading, checkpoint I/O).
-- **Time breakdown**: what fraction is forward, backward, optimizer, data loading, communication, checkpoint? If any one component >50% and was not before, investigate.
-- **Training-to-eval ratio**: eval should be <20% of wall time. If more, reduce eval frequency or eval samples.
+- **Time breakdown**: if any one component >50% of step time and was not before, investigate.
+- **Training-to-eval ratio**: eval should be <20% of wall time.
 
-## Loss and Gradients
+## Domain Skills as Heuristics
 
-When loss is the relevant progress indicator:
+Domain skills (grpo-monitor, distributed-monitor, etc.) provide knowledge about common patterns in their domains:
+- What metrics are typically important
+- What normal behavior looks like
+- What common failure modes exist
 
-- **Loss curve**: should decrease monotonically early, then plateau. Sudden spike = bad batch or LR issue.
-- **Learning rate**: verify warmup happened, verify current LR matches schedule.
-- **Gradient norm**: stable is good. Sudden 10x jump = exploding gradients. Sudden drop to ~0 = vanishing.
-- **Eval loss vs train loss gap**: widening gap = overfitting.
-
-## Pretraining-Specific
-
-- Loss should decrease smoothly. Any upward spike >5% of current loss = investigate the batch.
-- **Tokens/second throughput**: should be stable. Decrease = data pipeline bottleneck or hardware issue.
-- **MFU (model flops utilization)**: <30% on A100 = something is wrong.
+Use them as **reference knowledge to inform your reasoning**, not as checklists to follow. If a domain skill says "reward should increase" but your analysis of the training config suggests otherwise, trust your analysis and explain your reasoning.
