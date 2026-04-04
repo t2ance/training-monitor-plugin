@@ -71,6 +71,34 @@ This catches fabricated numbers and stale data. It does NOT catch wrong interpre
    - "Your report doesn't mention loading grpo-monitor, but the training config shows this is GRPO. Load the domain skill and re-check for RL-specific failure modes."
 6. **Maximum 2 rounds** per report. After 2 rounds, forward to orchestrator with a note about what remains unverified.
 
+## Strategist Process Checklist
+
+For strategy reports from the strategist agent, verify these process steps:
+
+### 1. History Gathering
+- If previous strategy history existed: did the strategist gather it (read logs, ask user)?
+- If no previous history: did the strategist correctly skip the user question?
+
+### 2. Previous Hypothesis Evaluation
+- If a pending hypothesis existed: did the strategist evaluate it against recorded success/failure criteria?
+- Is the outcome classification (CONFIRMED/REFUTED/INCONCLUSIVE) supported by the monitoring evidence?
+- If REFUTED: was the counter-hypothesis promoted as a candidate?
+
+### 3. Decision Gate Coherence
+- Is the classification (CONTINUE/REFINE/PIVOT/INVESTIGATE) supported by the stated evidence?
+- Does the classification account for the previous hypothesis outcome (if any)?
+
+### 4. Hypothesis Quality
+- Are there the correct number of hypotheses (0-3 for CONTINUE, 3 for others)?
+- Do all hypotheses pass the information independence test (testing A tells you nothing about B)?
+- Does each hypothesis have all required fields (hypothesis, action, expected outcome, failure criterion, counter-hypothesis, cost, learning value)?
+- Are counter-hypotheses genuinely different causal mechanisms, not just negations?
+- Was no previously failed approach repeated without new justification?
+
+### 5. "What Changed Our Belief" Substance
+- Is this section substantive (not "N/A" or one-word answers)?
+- For first sessions: are Phase 1 predictions used as the prior?
+
 ## What You Do NOT Do
 
 - You do not independently re-evaluate the domain question. You check process and logical coherence.

@@ -35,9 +35,10 @@ You are burning GPU compute every minute this runs. If the training is not makin
 ```
 monitoring-team (Team)
 ├── orchestrator     — main agent, coordinates all communication
-├── monitor-{N}      — one per job (even single-job), derives criteria + collects evidence
-├── reviewer         — always present, checks PROCESS compliance + spot-checks one data point
-└── investigator     — added dynamically when anomalies detected
+├── monitor-{N}      — one per job, derives criteria + collects evidence
+├── reviewer         — always present, checks PROCESS compliance + spot-checks
+├── troubleshooter   — added dynamically for technical failures (bugs, OOM, crashes)
+└── strategist       — added dynamically for performance optimization (suboptimal metrics)
 ```
 
 Star topology: all messages go through orchestrator.
@@ -100,20 +101,50 @@ Reviewer checks PROCESS, not domain content:
 
 If reviewer rejects: orchestrator forwards specific feedback to monitor. Max 2 rounds. After 2 rounds, the reviewer's "what remains unverified" note goes into the final summary.
 
-### Phase 5: Investigate
+### Phase 5: Troubleshoot
 
 Triggers when: (1) status is CRITICAL, OR (2) the monitor's report lists specific anomalies or deviations. Does NOT trigger on default WARNING with no specific findings — that indicates the monitor found nothing alarming but also couldn't confirm progress.
 
-1. Add `investigator` to the Team (reads `agents/anomaly-investigator.md`)
+1. Add `troubleshooter` to the Team (reads `agents/troubleshooter.md`)
 2. Send anomaly details via SendMessage
-3. Investigator returns root cause analysis
+3. Troubleshooter returns root cause analysis
 4. Forward to reviewer for verification
 5. **Gate**: write `monitoring-logs/<timestamp>/6-anomalies.md`
 
-### Phase 6: Synthesize
+### Phase 6: Strategize
+
+Triggers on ALL statuses after Phase 4 (Review) completes. If Phase 5 (Troubleshoot) was triggered, Phase 6 waits for Phase 5 to complete and includes the troubleshooter report as input to the strategist.
+
+For multi-job monitoring: spawn one strategist per job (matching the monitor pattern). All strategists run in parallel. The orchestrator collects all strategy reports and presents them to the user in priority order:
+1. PIVOT jobs first (highest urgency)
+2. INVESTIGATE jobs second
+3. REFINE jobs third
+4. CONTINUE jobs: skip user interaction entirely (record "no changes needed" automatically)
+
+This means the user only answers questions for jobs that need strategic decisions.
+
+The strategist proposes next-step hypotheses regardless of health status:
+- HEALTHY: optimization suggestions (efficiency, throughput)
+- WARNING: hypotheses for why training isn't progressing
+- CRITICAL: after troubleshooter addresses immediate failure, strategic direction for recovery
+- UNCERTAIN: diagnostic experiments to gather missing information
+
+1. Add `strategist` to the Team (reads `agents/strategist.md`)
+2. Send via SendMessage: monitoring report, training config, per-job state, domain context
+3. Strategist gathers history, classifies situation, generates 3 hypotheses
+4. Strategist presents options to user via AskUserQuestion
+5. After user choice: strategist generates execution plan
+6. Forward plan to reviewer for process check
+7. **Gate**: write `monitoring-logs/<timestamp>/7-strategy.md`
+
+### Phase 7: Synthesize
 
 1. Aggregate all reviewed reports
-2. Update per-job state: write `monitoring-logs/jobs/<job-id>.json` with derived criteria, status, history, any user guidance
+2. Update per-job state: write `monitoring-logs/jobs/<job-id>.json` using namespace isolation:
+   - `meta`: job identifier, last updated timestamp, session count
+   - `monitor`: derived criteria, status, history, user guidance (owned by job-monitor)
+   - `strategy`: decisions, hypotheses, outcomes, evaluate_after (owned by strategist)
+   Each agent reads the whole file but only writes to its own namespace. The orchestrator merges updates from all agents before writing.
 3. **Gate**: write `monitoring-logs/<timestamp>/summary.md`
 
 ## Domain Skills

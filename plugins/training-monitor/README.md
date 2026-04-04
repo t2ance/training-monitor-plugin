@@ -60,7 +60,8 @@ It will detect your training environment, check dependencies, and offer to insta
 | Agent | Dispatched by | Purpose |
 |-------|--------------|---------|
 | `job-monitor` | `training-monitor` | Monitors a single job (collect, compare, metrics, resources). Dispatched in parallel for multi-job. |
-| `anomaly-investigator` | `training-monitor` | Systematic root cause analysis for a detected anomaly. One per anomaly, in parallel. |
+| `troubleshooter` | `training-monitor` | Systematic root cause analysis for technical failures (OOM, crashes, config errors). |
+| `strategist` | `training-monitor` | Proposes next-step hypotheses when training performance is suboptimal. Generates 3 competing options with cost/benefit analysis. |
 
 ## External Dependencies
 
@@ -101,12 +102,12 @@ The orchestrator will:
 ## Architecture
 
 ```
-training-monitor (orchestrator)
-├── Phase 1: Predict         [serial]
-├── Phase 2: Monitor          [parallel: job-monitor agent per job]
-├── Phase 3: Synthesize       [serial]
-├── Phase 4: Investigate      [parallel: anomaly-investigator per anomaly]
-└── Phase 5: Log              [serial]
+monitoring-team (Team)
+├── orchestrator     — main agent, coordinates all communication
+├── monitor-{N}      — one per job, derives criteria + collects evidence
+├── reviewer         — always present, checks PROCESS compliance + spot-checks
+├── troubleshooter   — added dynamically for technical failures (bugs, OOM, crashes)
+└── strategist       — added dynamically for performance optimization (suboptimal metrics)
 ```
 
 Baseline: single-GPU, single-process PyTorch. Domain skills extend to GRPO, distributed, K8s, W&B.

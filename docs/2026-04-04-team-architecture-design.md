@@ -118,7 +118,8 @@ monitoring-team
 ├── orchestrator     — main agent (runs training-monitor skill)
 ├── monitor-{N}      — one per job, even single-job
 ├── reviewer         — always present, checks process + spot-checks ground truth
-└── investigator     — dynamic, added when anomalies detected
+├── troubleshooter   — dynamic, added for technical failures (bugs, OOM, crashes)
+└── strategist       — dynamic, added for performance optimization (suboptimal metrics)
 ```
 
 Each Team member reads its role template from `agents/`.
@@ -152,12 +153,19 @@ Phase 4: Review Loop
     monitor → orchestrator: "Updated report"
   max 2 rounds, then flag unresolved
 
-Phase 5: Investigate (if WARNING or CRITICAL)
-  orchestrator adds investigator to team
-  investigator → root cause analysis → reviewer verifies
+Phase 5: Troubleshoot (if CRITICAL or specific anomalies)
+  orchestrator adds troubleshooter to team
+  troubleshooter → root cause analysis → reviewer verifies
   → write monitoring-logs/<timestamp>/6-anomalies.md
 
-Phase 6: Synthesize
+Phase 6: Strategize (all statuses)
+  orchestrator adds strategist to team
+  strategist gathers history → classifies situation → generates 3 hypotheses
+  strategist → user: presents options via AskUserQuestion
+  user chooses → strategist generates execution plan → reviewer checks
+  → write monitoring-logs/<timestamp>/7-strategy.md
+
+Phase 7: Synthesize
   orchestrator aggregates all approved reports
   update per-job state (jobs/<name>.json)
   → write monitoring-logs/<timestamp>/summary.md
@@ -208,7 +216,8 @@ Gate rule: step not complete until log file written. Missing file = skipped step
 | File | Change |
 |------|--------|
 | `job-monitor.md` | Rewrite: Team role template. Remove all metric-specific checklists. Add: derive criteria from artifacts, articulate reasoning, respond to reviewer feedback. Add logging requirement. |
-| `anomaly-investigator.md` | Rewrite: Team role template. Add communication protocol. |
+| `troubleshooter.md` | Rewrite: Team role template. Add communication protocol. |
+| `strategist.md` | New: Team role template. Proposes strategic next steps with hypothesis-driven decision framework. |
 | `quality-reviewer.md` | Rewrite: check PROCESS not content. Add spot-check requirement. Remove all loss/gradient-specific acceptance criteria. |
 
 ### SKILL.md
