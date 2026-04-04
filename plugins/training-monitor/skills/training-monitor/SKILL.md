@@ -1,175 +1,198 @@
 ---
 name: training-monitor
-description: Prediction-first autonomous monitoring for ML/DL training jobs. Uses Team-based orchestration with mandatory quality review. Agent derives judgment criteria from training artifacts, not from hardcoded rules.
+description: Prediction-first monitoring for ML/DL training jobs. Single-agent execution with reviewer sub-agent. Derives judgment criteria from training artifacts, not hardcoded rules.
 ---
 
-# Training Monitor (Prediction-First)
+# Training Monitor
 
-Autonomous monitoring for ML/DL training jobs.
+You are monitoring **one training job**. Execute this entire procedure from start to finish.
 
-**Core principles:**
+## Core Principles
+
 1. **Prediction-first**: write predictions before reading logs, like writing tests before code.
-2. **Forced articulation**: the agent must explain WHY it believes the training is healthy or not. No status label without written reasoning.
-3. **Process review**: the reviewer checks whether the reasoning process is sound, not whether specific metrics hit specific thresholds.
-4. **Per-step logging gates**: each step writes a log file before proceeding. Missing log = skipped step. Gate logs must have substantive content in all sections (Input, Execution, Output, Next) — empty sections fail the gate.
+2. **Forced articulation**: no status label without written reasoning that supports it.
+3. **Derived criteria**: judge by the training's OWN artifacts (config, logged metrics, objective), not hardcoded thresholds.
+4. **"Process alive + GPU busy" is never evidence of progress.**
 
-Baseline assumption: single-GPU, single-process PyTorch training with log file output.
+## State Protocol
 
-## Judgment Standard
+All cross-session information is stored in files, not in context.
 
-You are burning GPU compute every minute this runs. If the training is not making progress, every minute wasted is unrecoverable. Your job is not to report that the process is alive — it is to report whether the compute is being used productively.
+| Operation | Path |
+|-----------|------|
+| Read previous state | `monitoring-logs/jobs/<job-id>.json` |
+| Write current state | `monitoring-logs/jobs/<job-id>.json` |
+| Session logs | `monitoring-logs/<timestamp>/` |
 
-**The agent derives judgment criteria from the training's own artifacts** (config, logged metrics, user-stated objective). The skill does NOT predefine which metrics to check or what thresholds to use.
+Job ID = training config path + model path (stable across restarts). PIDs are NOT stable identifiers.
 
-| Status | What the agent must provide |
-|--------|---------------------------|
-| HEALTHY | Articulate: what is the key progress indicator? what is the expected behavior? what is the baseline? what evidence shows progress beyond baseline? Conclusion must follow from evidence. |
-| WARNING | The process (derive criteria, collect evidence, analyze) must still be completed. WARNING means "I looked and didn't find progress," not "I didn't look." The absence of positive evidence is itself the justification — but the work must be done. |
-| CRITICAL | Articulate: what specific data shows failure (NaN, process dead, metric collapsed). |
-| UNCERTAIN | HIGHEST effort. Must list: what was tried to derive criteria, why it failed, what information would resolve it. Propose a specific question to the user. |
+Per-job state uses namespace isolation:
+- `meta`: job identifier, last updated, session count
+- `monitor`: derived criteria, status history, user guidance
+- `strategy`: decisions, hypotheses, outcomes, evaluate_after
 
-**"Process alive + GPU busy" is never evidence of progress.**
+## Anti-Skip Protocol
 
-## Architecture
+Before starting any work, create a task for EVERY step:
 
 ```
-monitoring-team (Team)
-├── orchestrator     — main agent, coordinates all communication
-├── monitor-{N}      — one per job, derives criteria + collects evidence
-├── reviewer         — always present, checks PROCESS compliance + spot-checks
-├── troubleshooter   — added dynamically for technical failures (bugs, OOM, crashes)
-└── strategist       — added dynamically for performance optimization (suboptimal metrics)
+TaskCreate: "Step 1: Setup + Predictions"
+TaskCreate: "Step 2: Collect Evidence"
+TaskCreate: "Step 3: Compare Predictions vs Actuals"
+TaskCreate: "Step 4: Analyze Metrics"
+TaskCreate: "Step 5: Check Resources"
+TaskCreate: "Step 6: Reviewer Audit"
+TaskCreate: "Step 7: Troubleshoot (if needed)"
+TaskCreate: "Step 8: Strategize"
+TaskCreate: "Step 9: Write State"
 ```
 
-Star topology: all messages go through orchestrator.
+Mark each task `in_progress` when starting, `completed` when the gate log is written.
 
 ## Procedure
 
-### Phase 1: Setup
+### Step 1: Setup + Predictions
 
-1. **Determine stable job identifiers.** A job is identified by its training config path + model path (or a user-provided stable name). PIDs are NOT stable identifiers — they change on restart. The job identifier is used for per-job state filenames.
-2. Check for per-job state: read `monitoring-logs/jobs/<job-id>.json` if it exists (criteria, history, user guidance from previous sessions).
-3. Create the session log directory: `monitoring-logs/<timestamp>/` (format: `YYYY-MM-DD_HHMMSS`). For multi-job monitoring, create subdirectories: `monitoring-logs/<timestamp>/job-<id>/`.
-4. Write predictions for EVERY running job **before reading any training evidence** (logs, GPU metrics, metric dashboards). Reading per-job state (step 2) is setup, not evidence collection.
+TaskUpdate: Step 1 -> in_progress
+
+1. Read per-job state file if it exists (previous session's criteria, history, decisions).
+2. Create session log directory: `monitoring-logs/<timestamp>/` (format: `YYYY-MM-DD_HHMMSS`).
+3. Write predictions for this job **before reading any training evidence** (logs, GPU metrics, dashboards).
    - If per-job state exists: base predictions on previous session's values.
    - If first session: base predictions on training config and general knowledge.
    - Reference: [steps/1-predict.md](steps/1-predict.md)
-5. **Gate**: write `monitoring-logs/<timestamp>/1-predict.md`
+4. **Gate**: write `monitoring-logs/<timestamp>/1-predict.md`
 
-### Phase 2: Create Team
+TaskUpdate: Step 1 -> completed
 
-Create a Team with:
-- One `monitor` member per job (reads `agents/job-monitor.md` for role instructions)
-- One `reviewer` member (reads `agents/quality-reviewer.md` for role instructions)
+### Step 2: Collect Evidence
 
-### Phase 3: Monitor
+TaskUpdate: Step 2 -> in_progress
 
-Send each monitor via SendMessage:
-- Stable job identifier
-- Job identifiers (PID, log file, checkpoint dir)
-- Predictions from Phase 1
-- Per-job state (if exists) — so the monitor uses consistent criteria
-- Domain context (training type, infrastructure)
+Run ALL evidence collection commands in parallel.
+Reference: [steps/2-collect.md](steps/2-collect.md)
 
-Each monitor:
-1. Derives judgment criteria from training artifacts (or uses per-job state if available)
-2. Collects evidence: [steps/2-collect.md](steps/2-collect.md)
-3. Compares predictions vs actuals: [steps/3-compare.md](steps/3-compare.md)
-4. Checks metrics using derived criteria: [steps/4-metrics.md](steps/4-metrics.md)
-5. Checks resources: [steps/5-resources.md](steps/5-resources.md)
-6. Writes articulated reasoning for status assessment
+**Gate**: write `monitoring-logs/<timestamp>/2-collect.md`
 
-All monitors work in parallel.
+TaskUpdate: Step 2 -> completed
 
-**Gate**: orchestrator writes gate logs after receiving monitor reports. Single job: write directly to `monitoring-logs/<timestamp>/`. Multi-job: write per-job to `monitoring-logs/<timestamp>/job-<id>/`. The orchestrator records the monitor's full evidence and reasoning — not a one-line summary.
-- `2-collect.md`
-- `3-compare.md`
-- `4-metrics.md`
-- `5-resources.md`
+### Step 3: Compare Predictions vs Actuals
 
-### Phase 4: Review
+TaskUpdate: Step 3 -> in_progress
 
-Forward all monitor reports to reviewer via SendMessage.
+Build comparison table. Flag deviations that would change your health assessment.
+Reference: [steps/3-compare.md](steps/3-compare.md)
 
-Reviewer checks PROCESS, not domain content:
-- Did the monitor read the training config / artifacts?
-- Did the monitor explicitly state the key progress indicator, expected behavior, and WHY?
-- Did the monitor establish a baseline?
-- Does the conclusion follow from the stated evidence? (logical coherence — does the stated expected behavior match the stated conclusion?)
-- Spot-check: reviewer independently verifies the claim that the APPROVED/REJECTED decision hinges on. State what was checked, how, and the result.
-- Are gate log files present with substantive content?
+**Gate**: write `monitoring-logs/<timestamp>/3-compare.md`
 
-If reviewer rejects: orchestrator forwards specific feedback to monitor. Max 2 rounds. After 2 rounds, the reviewer's "what remains unverified" note goes into the final summary.
+TaskUpdate: Step 3 -> completed
 
-### Phase 5: Troubleshoot
+### Step 4: Analyze Metrics
 
-Triggers when: (1) status is CRITICAL, OR (2) the monitor's report lists specific anomalies or deviations. Does NOT trigger on default WARNING with no specific findings — that indicates the monitor found nothing alarming but also couldn't confirm progress.
+TaskUpdate: Step 4 -> in_progress
 
-1. Add `troubleshooter` to the Team (reads `agents/troubleshooter.md`)
-2. Send anomaly details via SendMessage
-3. Troubleshooter returns root cause analysis
-4. Forward to reviewer for verification
-5. **Gate**: write `monitoring-logs/<timestamp>/6-anomalies.md`
+Derive judgment criteria from the training's own artifacts. Assess health with articulated reasoning.
+Reference: [steps/4-metrics.md](steps/4-metrics.md)
 
-### Phase 6: Strategize
+Load domain skills when the condition matches (MANDATORY -- loading required, following blindly not):
 
-Triggers on ALL statuses after Phase 4 (Review) completes. If Phase 5 (Troubleshoot) was triggered, Phase 6 waits for Phase 5 to complete and includes the troubleshooter report as input to the strategist.
+| Skill | When to load |
+|-------|-------------|
+| `grpo-monitor` | GRPO, PPO, or other RL algorithms |
+| `distributed-monitor` | Multiple GPUs or processes |
+| `k8s-monitor` | Kubernetes |
+| `wandb-monitor` | Weights & Biases logging |
 
-For multi-job monitoring: spawn one strategist per job (matching the monitor pattern). All strategists run in parallel. The orchestrator collects all strategy reports and presents them to the user in priority order:
-1. PIVOT jobs first (highest urgency)
-2. INVESTIGATE jobs second
-3. REFINE jobs third
-4. CONTINUE jobs: skip user interaction entirely (record "no changes needed" automatically)
+**Gate**: write `monitoring-logs/<timestamp>/4-metrics.md`
 
-This means the user only answers questions for jobs that need strategic decisions.
+TaskUpdate: Step 4 -> completed
 
-The strategist proposes next-step hypotheses regardless of health status:
-- HEALTHY: optimization suggestions (efficiency, throughput)
-- WARNING: hypotheses for why training isn't progressing
-- CRITICAL: after troubleshooter addresses immediate failure, strategic direction for recovery
-- UNCERTAIN: diagnostic experiments to gather missing information
+### Step 5: Check Resources
 
-1. Add `strategist` to the Team (reads `agents/strategist.md`)
-2. Send via SendMessage: monitoring report, training config, per-job state, domain context
-3. Strategist gathers history, classifies situation, generates 3 hypotheses
-4. Strategist presents options to user via AskUserQuestion
-5. After user choice: strategist generates execution plan
-6. Forward plan to reviewer for process check
-7. **Gate**: write `monitoring-logs/<timestamp>/7-strategy.md`
+TaskUpdate: Step 5 -> in_progress
 
-### Phase 7: Synthesize
+Reference: [steps/5-resources.md](steps/5-resources.md)
 
-1. Aggregate all reviewed reports
-2. Update per-job state: write `monitoring-logs/jobs/<job-id>.json` using namespace isolation:
-   - `meta`: job identifier, last updated timestamp, session count
-   - `monitor`: derived criteria, status, history, user guidance (owned by job-monitor)
-   - `strategy`: decisions, hypotheses, outcomes, evaluate_after (owned by strategist)
-   Each agent reads the whole file but only writes to its own namespace. The orchestrator merges updates from all agents before writing.
-3. **Gate**: write `monitoring-logs/<timestamp>/summary.md`
+**Gate**: write `monitoring-logs/<timestamp>/5-resources.md`
 
-## Domain Skills
+TaskUpdate: Step 5 -> completed
 
-You MUST load the corresponding domain skill when the condition matches. Loading is mandatory; following blindly is not. Domain skills provide heuristics (common patterns, red flags, known failure modes) that you reason WITH, not constraints that override your analysis. Skipping them means you miss known failure modes you cannot derive from the training config alone.
+### Step 6: Reviewer Audit
 
-| Skill | When to load (MANDATORY) |
-|-------|--------------------------|
-| `grpo-monitor` | Training uses GRPO, PPO, or other RL algorithms |
-| `distributed-monitor` | Training uses multiple GPUs or multiple processes |
-| `k8s-monitor` | Job runs on Kubernetes |
-| `wandb-monitor` | Job logs to Weights & Biases (requires `wandb-primary` from `wandb/skills`) |
+TaskUpdate: Step 6 -> in_progress
 
-Use `monitor-doctor` to verify all dependencies.
+Spawn a **sub-agent** to adversarially review your work from Steps 1-5. The reviewer checks PROCESS, not domain content.
+
+Send the sub-agent:
+- Your gate logs from Steps 1-5
+- The reviewer checklist: read `agents/quality-reviewer.md`
+
+If REJECTED: revise the flagged issues and resubmit. Maximum 2 rounds.
+
+Reference: [steps/6-review.md](steps/6-review.md)
+
+**Gate**: write `monitoring-logs/<timestamp>/6-review.md`
+
+TaskUpdate: Step 6 -> completed
+
+### Step 7: Troubleshoot (conditional)
+
+**Skip if**: status is HEALTHY, or WARNING with no specific anomalies.
+**Trigger if**: status is CRITICAL, OR specific anomalies or deviations were found in Steps 2-5.
+
+TaskUpdate: Step 7 -> in_progress
+
+Investigate the anomaly systematically: observe with numbers, reproduce, isolate root cause, propose concrete action.
+Reference: [steps/7-troubleshoot.md](steps/7-troubleshoot.md)
+
+**Gate**: write `monitoring-logs/<timestamp>/7-troubleshoot.md`
+
+TaskUpdate: Step 7 -> completed
+
+### Step 8: Strategize
+
+TaskUpdate: Step 8 -> in_progress
+
+Propose next-step hypotheses based on monitoring results. This step triggers on ALL statuses:
+- HEALTHY: optional efficiency suggestions (lightweight, no full hypothesis structure required)
+- WARNING/CRITICAL/UNCERTAIN: 3 full hypotheses with falsifiable predictions
+
+Present options to user via AskUserQuestion. After user choice, generate execution plan.
+Reference: [steps/8-strategy.md](steps/8-strategy.md)
+
+**Gate**: write `monitoring-logs/<timestamp>/8-strategy.md`
+
+TaskUpdate: Step 8 -> completed
+
+### Step 9: Write State
+
+TaskUpdate: Step 9 -> in_progress
+
+Update per-job state file (`monitoring-logs/jobs/<job-id>.json`):
+- `meta`: job identifier, last updated timestamp, session count
+- `monitor`: derived criteria, current status, status history
+- `strategy`: chosen hypothesis, execution plan, success/failure criteria, evaluate_after timestamp
+
+**Gate**: write `monitoring-logs/<timestamp>/9-summary.md`
+
+TaskUpdate: Step 9 -> completed
+
+## Judgment Standard
+
+| Status | What you must provide |
+|--------|----------------------|
+| HEALTHY | Key progress indicator, expected behavior, baseline, evidence of progress beyond baseline. Conclusion follows from evidence. |
+| WARNING | Full process completed. "I looked and found no progress," not "I didn't look." |
+| CRITICAL | Specific data showing failure (NaN, process dead, metric collapsed). |
+| UNCERTAIN | Highest effort. What was tried, why it failed, what would resolve it. Propose a specific question to the user. |
 
 ## Rules
 
 - NEVER read training evidence before writing predictions.
-- NEVER assign a status without written reasoning that supports it.
-- WARNING requires the full process to be completed. It means "I looked and found no progress," not "I didn't look."
-- HEALTHY and CRITICAL require articulated evidence. UNCERTAIN requires the most effort.
-- Flag deviations that would change your health assessment. For numeric metrics: >20% relative OR >10 absolute percentage points (whichever is more meaningful). For categorical predictions: any mismatch. For near-zero values: use absolute difference. State what you flagged and why.
-- If a job is DEAD, do not restart without investigation.
-- Report ALL GPUs, not just the ones you expect busy.
+- NEVER assign a status without written reasoning.
+- WARNING requires the full process. It means "I looked and found no progress."
+- Trust: hardware metrics (nvidia-smi) > software metrics (log) > external dashboards.
+- Every step must write its gate log with substantive content before proceeding.
+- Do not use efficiency, speed, or brevity as justification for skipping any step.
 - If anomaly detected, investigate NOW. Do not defer.
-- Never guess cause of anomaly. Investigate with evidence.
-- Trust hardware metrics (nvidia-smi) over software metrics (log file) over external dashboards.
-- Every step must write its gate log with substantive content before proceeding. Empty sections fail the gate.
+- Report ALL GPUs, not just the ones you expect busy.

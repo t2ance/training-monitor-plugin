@@ -1,6 +1,6 @@
 # Training Monitor Plugin
 
-Prediction-first autonomous monitoring for ML/DL training jobs. Write expectations before reading logs, dispatch sub-agents for parallel monitoring, detect anomalies and investigate root causes.
+Prediction-first monitoring for ML/DL training jobs. Single-agent execution with reviewer sub-agent. Derives judgment criteria from training artifacts, not hardcoded rules.
 
 ## Installation
 
@@ -48,7 +48,7 @@ It will detect your training environment, check dependencies, and offer to insta
 
 | Skill | Description | Standalone? |
 |-------|-------------|-------------|
-| `training-monitor` | Core monitoring orchestrator. Dispatches sub-agents for parallel job monitoring and anomaly investigation. | Yes |
+| `training-monitor` | Core monitoring procedure. Single-agent executes the full pipeline for one job, spawns a reviewer sub-agent for audit. | Yes |
 | `grpo-monitor` | GRPO/RL training: reward, KL, entropy, generation quality, phase time balance. | Yes |
 | `distributed-monitor` | Multi-GPU/multi-process: NCCL, process hierarchy, straggler detection. | Yes |
 | `k8s-monitor` | Kubernetes: kubectl collection, pod anomalies, scheduling escalation ladder. | Yes |
@@ -57,11 +57,22 @@ It will detect your training environment, check dependencies, and offer to insta
 
 ## Agents
 
-| Agent | Dispatched by | Purpose |
-|-------|--------------|---------|
-| `job-monitor` | `training-monitor` | Monitors a single job (collect, compare, metrics, resources). Dispatched in parallel for multi-job. |
-| `troubleshooter` | `training-monitor` | Systematic root cause analysis for technical failures (OOM, crashes, config errors). |
-| `strategist` | `training-monitor` | Proposes next-step hypotheses when training performance is suboptimal. Generates 3 competing options with cost/benefit analysis. |
+| Agent | Spawned by | Purpose |
+|-------|------------|---------|
+| `quality-reviewer` | `training-monitor` executor | Sub-agent for adversarial process review. Checks reasoning process and logical coherence, spot-checks one load-bearing claim. |
+
+## Step Files
+
+| Step | File | Description |
+|------|------|-------------|
+| 1 | `steps/1-predict.md` | Write predictions before reading evidence |
+| 2 | `steps/2-collect.md` | Collect all evidence in parallel |
+| 3 | `steps/3-compare.md` | Compare predictions vs actuals |
+| 4 | `steps/4-metrics.md` | Derive criteria and analyze metrics |
+| 5 | `steps/5-resources.md` | Check GPU, memory, disk resources |
+| 6 | `steps/6-review.md` | Reviewer sub-agent audit |
+| 7 | `steps/7-troubleshoot.md` | Systematic root cause analysis (conditional) |
+| 8 | `steps/8-strategy.md` | Strategic next-step hypotheses |
 
 ## External Dependencies
 
@@ -83,12 +94,15 @@ Run `/monitor-doctor` to check what is installed and install what is missing int
 /training-monitor
 ```
 
-The orchestrator will:
+The executor will:
 1. Write predictions before reading any data
-2. Dispatch sub-agents for parallel monitoring (multi-job)
-3. Synthesize results and detect anomalies
-4. Dispatch investigation agents for any anomalies
-5. Log findings
+2. Collect evidence and compare against predictions
+3. Analyze metrics using derived criteria
+4. Check resources
+5. Spawn a reviewer sub-agent for adversarial audit
+6. Troubleshoot anomalies (if any)
+7. Propose strategic next steps
+8. Write per-job state for cross-session continuity
 
 ### Use domain skills standalone
 
@@ -102,12 +116,17 @@ The orchestrator will:
 ## Architecture
 
 ```
-monitoring-team (Team)
-├── orchestrator     — main agent, coordinates all communication
-├── monitor-{N}      — one per job, derives criteria + collects evidence
-├── reviewer         — always present, checks PROCESS compliance + spot-checks
-├── troubleshooter   — added dynamically for technical failures (bugs, OOM, crashes)
-└── strategist       — added dynamically for performance optimization (suboptimal metrics)
+executor (single agent per job)
+├── Steps 1-5: predict, collect, compare, metrics, resources
+├── Step 6: spawns quality-reviewer sub-agent for adversarial audit
+├── Step 7: troubleshoot (conditional, on anomalies)
+├── Step 8: strategize (propose hypotheses to user)
+└── Step 9: write per-job state to disk
 ```
+
+- **Main agent** does not read SKILL.md. It spawns one executor per job.
+- **Each executor** reads SKILL.md, executes the full procedure for one job, writes results to files, then finishes.
+- **Cross-session state** goes through per-job state files on disk, never through any agent's context.
+- **TodoList (TaskCreate/TaskUpdate)** is used as an anti-skip mechanism -- all steps registered before work begins.
 
 Baseline: single-GPU, single-process PyTorch. Domain skills extend to GRPO, distributed, K8s, W&B.
