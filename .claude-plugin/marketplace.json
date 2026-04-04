@@ -1,6 +1,6 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "training-monitor-marketplace",
+  "name": "training-monitor",
   "description": "Prediction-first autonomous monitoring for ML/DL training jobs. Includes domain skills for GRPO/RL, distributed training, Kubernetes, and W&B.",
   "owner": {
     "name": "peijia"
