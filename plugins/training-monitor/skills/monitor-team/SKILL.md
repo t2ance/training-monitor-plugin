@@ -23,6 +23,20 @@ Roles:
 - **Teammate**: one-shot operator. Runs /training-monitor skill, then exits.
   Authority and behavior determined by user preferences collected at setup.
 
+## CRITICAL: How to create the teammate
+
+You MUST use the **Agent tool** with these parameters to create a teammate:
+- `name`: a descriptive name (e.g., "monitor-cycle-1")
+- `mode`: "dontAsk"
+- `run_in_background`: true
+- `prompt`: the teammate instructions generated in Step 2
+
+This creates a teammate that is addressable via SendMessage for shutdown.
+
+Do NOT use plain subagents, do NOT use TeamCreate, do NOT run the monitoring
+procedure yourself. The whole point is delegation: you create a teammate,
+the teammate does ALL the work, you only manage its lifecycle.
+
 ## Procedure
 
 ### Step 1: Collect user preferences
@@ -75,27 +89,39 @@ include all of the following:
 
 ### Step 3: Set up cron
 
-Create a recurring cron job at the user's requested frequency (from Q3). Pick
-an off-round minute (e.g., :23, :47) to avoid API contention.
+Use **CronCreate** to schedule a recurring job at the user's requested frequency
+(from Q3). Pick an off-round minute (e.g., :23, :47) to avoid API contention.
 
-The cron prompt should instruct the team lead to:
-1. Create a new teammate (mode: dontAsk) with the instructions from Step 2.
-2. When the teammate finishes, send it a shutdown request.
+The cron prompt tells you (team lead) what to do each cycle. It should contain:
+1. The full teammate instructions from Step 2 (embedded verbatim).
+2. A reminder to use the Agent tool with `mode: dontAsk`, `run_in_background: true`.
+3. A reminder to shutdown the teammate when it finishes.
+
+Example cron prompt structure:
+```
+Create a new teammate using the Agent tool (mode: dontAsk, run_in_background: true)
+with these instructions:
+
+[teammate instructions from Step 2]
+
+When the teammate completes, send it a shutdown request via SendMessage.
+```
 
 ### Step 4: Trigger first cycle immediately
 
-Spawn the first teammate right away so the user sees results without waiting
-for the first cron tick.
+Use the **Agent tool** to spawn the first teammate right away (same parameters:
+mode dontAsk, run_in_background true, with the instructions from Step 2).
+Do not wait for the first cron tick.
 
 ### Step 5: On teammate completion
 
 When the teammate sends a report, idle notification, or terminated message:
-1. Send a shutdown request.
+1. Send a shutdown request via **SendMessage** (structured shutdown_request).
 2. If no response after 2 attempts, stop retrying -- it will time out.
 3. Do not analyze, summarize, or react to the report content.
 
 ### Step 6: On next cron trigger
 
-Create a brand new teammate. No state is carried in context -- cross-session
-state lives in `monitoring-logs/jobs/*.json` (managed by /training-monitor
-inside the teammate).
+Use the **Agent tool** again to create a brand new teammate. Each cycle is
+independent. No state is carried in context -- cross-session state lives in
+`monitoring-logs/jobs/*.json` (managed by /training-monitor inside the teammate).
