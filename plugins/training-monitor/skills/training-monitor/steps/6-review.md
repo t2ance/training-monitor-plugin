@@ -30,6 +30,12 @@ If the reviewer sends REJECTED with specific feedback:
 
 Maximum 2 rounds. After 2 rounds, record "what remains unverified" and proceed.
 
+## Handling Pitfalls
+
+The reviewer may include a `PITFALLS:` section in its response. Each pitfall is tagged `[global]` or `[job-specific]`.
+
+Do NOT write pitfalls to disk in this step. Collect them and pass them to Step 9 (Write State), which handles writing to both `monitoring-logs/pitfalls.md` (global) and the per-job state file (job-specific).
+
 ## Gate Log Format
 
 Record in `monitoring-logs/<timestamp>/6-review.md`:
@@ -37,3 +43,4 @@ Record in `monitoring-logs/<timestamp>/6-review.md`:
 - What was spot-checked and the result
 - If REJECTED: what was revised and why
 - If unresolved after 2 rounds: what remains unverified
+- Pitfalls extracted by reviewer (if any)

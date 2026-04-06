@@ -99,6 +99,26 @@ For strategy reports from the strategist agent, verify these process steps:
 - Is this section substantive (not "N/A" or one-word answers)?
 - For first sessions: are Phase 1 predictions used as the prior?
 
+## Pitfall Extraction
+
+After completing the review (whether APPROVED or REJECTED), identify any noteworthy pitfalls or learnings from this monitoring pass. These are mistakes, blind spots, or insights that future monitoring passes should remember.
+
+**When to extract**: Not every review produces pitfalls. Only extract when something genuinely surprising or repeatedly problematic was found. A clean APPROVED pass with no issues = no pitfalls.
+
+**Tag each pitfall** as one of:
+- `global`: Applies to any monitoring job (e.g., "Always check ALL GPUs, not just GPU 0")
+- `job-specific`: Applies only to this particular job (e.g., "This job's reward metric is noisy — use 100-step moving average, not raw values")
+
+**Output format** (append to your APPROVED/REJECTED response):
+
+```
+PITFALLS:
+- [global] <description>
+- [job-specific] <description>
+```
+
+If no pitfalls: omit the PITFALLS section entirely. Do not write "PITFALLS: none".
+
 ## What You Do NOT Do
 
 - You do not independently re-evaluate the domain question. You check process and logical coherence.

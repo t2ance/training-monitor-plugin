@@ -56,12 +56,13 @@ Mark each task `in_progress` when starting, `completed` when the gate log is wri
 TaskUpdate: Step 1 -> in_progress
 
 1. Read per-job state file if it exists (previous session's criteria, history, decisions).
-2. Create session log directory: `monitoring-logs/<timestamp>/` (format: `YYYY-MM-DD_HHMMSS`).
-3. Write predictions for this job **before reading any training evidence** (logs, GPU metrics, dashboards).
+2. Read pitfalls: `monitoring-logs/pitfalls.md` (global) and `monitor.learnings` from per-job state (job-specific). Keep these in mind throughout the pass — they are mistakes from previous sessions that should not be repeated.
+3. Create session log directory: `monitoring-logs/<timestamp>/` (format: `YYYY-MM-DD_HHMMSS`).
+4. Write predictions for this job **before reading any training evidence** (logs, GPU metrics, dashboards).
    - If per-job state exists: base predictions on previous session's values.
    - If first session: base predictions on training config and general knowledge.
    - Reference: [steps/1-predict.md](steps/1-predict.md)
-4. **Gate**: write `monitoring-logs/<timestamp>/1-predict.md`
+5. **Gate**: write `monitoring-logs/<timestamp>/1-predict.md`
 
 TaskUpdate: Step 1 -> completed
 
@@ -170,8 +171,13 @@ TaskUpdate: Step 9 -> in_progress
 
 Update per-job state file (`monitoring-logs/jobs/<job-id>.json`):
 - `meta`: job identifier, last updated timestamp, session count
-- `monitor`: derived criteria, current status, status history
+- `monitor`: derived criteria, current status, status history, learnings (job-specific pitfalls from reviewer)
 - `strategy`: chosen hypothesis, execution plan, success/failure criteria, evaluate_after timestamp
+
+Write pitfalls from Step 6 reviewer (if any):
+- `[global]` pitfalls: append to `monitoring-logs/pitfalls.md` (create if doesn't exist). One line per pitfall, prefixed with session timestamp.
+- `[job-specific]` pitfalls: append to `monitor.learnings` array in per-job state file.
+- Deduplicate: before appending, check if a semantically equivalent pitfall already exists. Skip if so.
 
 **Gate**: write `monitoring-logs/<timestamp>/9-summary.md`
 
