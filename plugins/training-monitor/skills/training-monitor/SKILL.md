@@ -63,13 +63,16 @@ Mark each task `in_progress` when starting, `completed` when the gate log is wri
 
 TaskUpdate: Phase 0 -> in_progress
 
-Establish agreement with the reviewer on this pass's focus and acceptance criteria before any evidence is collected.
+Discover the monitoring target, then establish agreement with the reviewer on this pass's focus and acceptance criteria.
 
-1. Read per-job state file if it exists (previous session's criteria, history, decisions).
+1. **Discover job targets**:
+   - If per-job state exists: read job targets (PID, log path, config path, checkpoint dir) from state. Verify targets are still valid (process alive, paths exist).
+   - If first session: discover what's running. Use `ps`, `nvidia-smi`, find log/config files. Record discovered targets.
+   - Discovery is METADATA (what process, which GPUs, where are logs), not training DATA (metrics, loss values). It does not violate the prediction-first principle.
 2. Read pitfalls: `monitoring-logs/pitfalls.md` (global) and `monitor.learnings` from per-job state (job-specific).
-3. Write a contract proposal based on state + pitfalls.
+3. Write a contract proposal based on discovered targets + state + pitfalls.
 4. Send to reviewer for review/negotiation (dispatch determines mechanism).
-5. Reach agreement.
+5. Reach agreement. The contract includes the discovered job targets — Phase 2 collectors use these as input.
 
 Reference: [phases/0-contract.md](phases/0-contract.md)
 

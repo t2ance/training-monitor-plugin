@@ -2,13 +2,63 @@
 
 ## Goal
 
-Before any evidence collection, establish an explicit agreement between the monitor and reviewer on what this monitoring pass will focus on and what constitutes a passing audit.
+Two things happen in this phase: (1) discover what we're monitoring, and (2) agree with the reviewer on what this pass will focus on.
 
-This is NOT bureaucracy. It solves a specific problem: without a contract, the reviewer can only check generic process compliance. With a contract, the reviewer checks whether the monitor actually addressed what matters THIS time.
+## Job Discovery
+
+Before writing any contract, establish WHAT we are monitoring.
+
+### Subsequent sessions (per-job state exists)
+
+Read job targets from `monitoring-logs/jobs/<job-id>.json`:
+- PID, log path, config path, checkpoint dir
+- Verify targets are still valid:
+  ```bash
+  ps -p <PID> -o pid --no-headers 2>/dev/null || echo "DEAD"
+  test -f <log_path> && echo "EXISTS" || echo "MISSING"
+  ```
+- If PID is dead: check if job completed (log says "Training complete") or crashed. Update state accordingly.
+- If paths moved: search for new locations.
+
+### First session (no per-job state)
+
+Discover what's running:
+```bash
+# Find training processes
+nvidia-smi --query-compute-apps=pid,used_memory --format=csv,noheader
+ps aux | grep -E "python.*train|torchrun|deepspeed" | grep -v grep
+
+# Find config and log files (search from project directory)
+find . -maxdepth 3 -name "*.yaml" -o -name "*.json" | head -20
+find . -maxdepth 3 -name "*.log" -newer <1-hour-ago> | head -10
+```
+
+Record discovered targets:
+- PID(s) and which GPUs they use
+- Training config path
+- Log file path
+- Checkpoint directory
+- Training type (infer from config: SFT, GRPO, etc.)
+
+**Discovery is METADATA** (what process, which GPUs, where are logs), not training DATA (metrics, loss values). It does not violate the prediction-first principle.
 
 ## Contract Proposal
 
 Write a contract proposal with these sections:
+
+### Job Targets
+
+The discovered job targets. Phase 2 collectors use these as input.
+
+```
+Job: [name derived from config/model path]
+PID: [pid]
+GPUs: [list]
+Config: [path]
+Log: [path]
+Checkpoint dir: [path]
+Training type: [SFT/GRPO/etc.]
+```
 
 ### Focus Areas
 
@@ -61,6 +111,14 @@ Record in `monitoring-logs/<timestamp>/0-contract.md`:
 ```
 CONTRACT: [job name] -- [session timestamp]
 ---
+Job targets:
+  PID: [pid]
+  GPUs: [list]
+  Config: [path]
+  Log: [path]
+  Checkpoint dir: [path]
+  Training type: [type]
+
 Focus areas:
 - [list]
 
