@@ -97,7 +97,34 @@ Capabilities:
 ================================
 ```
 
-### 5. Save Profile (optional)
+### 5. Choose Monitoring Mode
+
+Ask the user which monitoring mode to use (AskUserQuestion):
+
+**Team mode (`/monitor-team`)**:
+Each monitoring cycle creates a fresh teammate with clean context. The main agent
+only manages lifecycle (create, wait, shutdown). More robust context isolation
+but more complex architecture.
+
+**Ralph mode (`/monitor-ralph`)**:
+The main agent executes monitoring directly. Context stays clean via auto-compact
+between passes. Simpler architecture, easier user intervention, but requires
+auto-compact window configuration.
+
+If the user selects Ralph mode:
+
+1. Check if `CLAUDE_CODE_AUTO_COMPACT_WINDOW` is set in the current session.
+   If not, instruct the user to restart Claude Code with:
+   ```
+   CLAUDE_CODE_AUTO_COMPACT_WINDOW=200000 claude
+   ```
+   This only affects the current session. Do NOT suggest adding it to shell
+   profile -- it would degrade non-monitoring sessions.
+
+2. The PreCompact hook is bundled with this plugin (hooks/hooks.json) and activates
+   automatically. No manual hook configuration needed.
+
+### 6. Save Profile (optional)
 
 If the project has a `.claude/` directory, offer to save the environment profile:
 
@@ -106,7 +133,8 @@ If the project has a `.claude/` directory, offer to save the environment profile
   "training_type": "grpo",
   "infrastructure": "k8s",
   "metric_trackers": ["wandb"],
-  "skills_to_load": ["grpo-monitor", "k8s-monitor", "wandb-monitor"]
+  "skills_to_load": ["grpo-monitor", "k8s-monitor", "wandb-monitor"],
+  "monitoring_mode": "ralph"
 }
 ```
 
