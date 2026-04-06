@@ -53,7 +53,7 @@ It will detect your training environment, check dependencies, and offer to insta
 | `distributed-monitor` | Multi-GPU/multi-process: NCCL, process hierarchy, straggler detection. | Yes |
 | `k8s-monitor` | Kubernetes: kubectl collection, pod anomalies, scheduling escalation ladder. | Yes |
 | `wandb-monitor` | W&B monitoring: heartbeat stall detection, metric key variations, health thresholds, run comparison. | Yes |
-| `monitor-team` | Cron-based team monitoring loop. Creates a fresh teammate each cycle to run training-monitor. Collects user preferences (target, mode, frequency, authority) at setup. | Yes |
+| `monitor-team` | Cron-based team monitoring loop. Creates a fresh teammate each cycle to run training-monitor. Collects user preferences (target, mode, frequency, authority, team conflict) at setup. | Yes |
 | `monitor-doctor` | Interactive setup wizard. Detects environment, checks dependencies, installs missing ones. | Yes |
 
 ## Agents
