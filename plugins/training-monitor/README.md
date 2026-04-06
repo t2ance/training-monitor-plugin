@@ -34,6 +34,14 @@ Add these to `~/.claude/settings.json`:
 
 Restart Claude Code to pull the plugin.
 
+## Update
+
+```bash
+claude plugin update training-monitor
+```
+
+Restart Claude Code to activate the new version. Or use `/reload-plugins` to hot-reload without restarting the session.
+
 ### Setup
 
 After installation, run the interactive setup wizard:
