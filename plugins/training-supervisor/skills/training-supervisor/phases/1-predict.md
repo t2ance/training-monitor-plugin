@@ -16,11 +16,12 @@ PREDICTIONS (written before reading any data):
 - Expected phase: [init / forward / backward / optimizer / checkpoint / eval / idle]
 - Expected key metrics: [loss/reward range based on trend from previous steps]
 - Risk factors: [what could go wrong given current state]
+- Judgment prediction: [do you expect this training to still be progressing? what trajectory do you expect?]
 - Contract focus: [what the contract says to watch for this pass]
 ---
 ```
 
-The last line links predictions to the contract -- predict what you expect to see regarding the contract's focus areas.
+The last two lines are important: predict not just metrics but your judgment -- will you expect to see progress or saturation? This creates a prediction you can compare against your actual holistic assessment in Phase 3.
 
 ## GPU Power as Primary Utilization Indicator
 
@@ -28,21 +29,14 @@ nvidia-smi "utilization %" is misleading. It only measures whether any kernel is
 
 **Always use power draw as the primary utilization indicator.**
 
-### Power Reference
+### Power as a Rough Guide
 
-| GPU | TDP (SXM) | TDP (PCIe) | Idle |
-|-----|-----------|------------|------|
-| A100 80GB | 400W | 300W | ~60W |
+GPU power draw varies by model and variant. Use the GPU's rated TDP as a reference point:
+- **Near TDP**: GPU is doing heavy compute (training backward pass). This is the useful work.
+- **Well below TDP**: GPU is doing lighter work (inference/generation) or partially idle. Normal during rollout phases in RL training.
+- **Near idle**: No useful work happening.
 
-Real utilization = (actual_power - idle_power) / (TDP - idle_power)
-
-### Power by Training Phase
-
-| Phase | Expected Power | Notes |
-|-------|---------------|-------|
-| Heavy training (backward pass) | 250-400W | High utilization, this is the useful work |
-| Light inference (generation) | 80-150W | Normal for autoregressive generation |
-| Idle / waiting | 60-70W | No useful work happening |
+The ratio of actual power to TDP gives a rough sense of how hard the GPU is working. Look up the specific GPU's TDP if needed.
 
 ## Gate Log Format
 

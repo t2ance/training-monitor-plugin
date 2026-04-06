@@ -2,7 +2,7 @@
 
 ## Goal
 
-An independent reviewer audits your monitoring work for contract compliance, process compliance, and logical coherence. You cannot meaningfully review your own reasoning -- this phase exists because self-review is unreliable.
+An independent reviewer audits your supervision work for contract compliance, process compliance, and logical coherence. You cannot meaningfully review your own reasoning -- this phase exists because self-review is unreliable.
 
 ## What to Send the Reviewer
 

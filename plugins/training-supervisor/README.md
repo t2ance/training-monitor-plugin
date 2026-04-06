@@ -8,19 +8,19 @@ For installation and update instructions, see the [top-level README](../../READM
 
 | Skill | Description | Standalone? |
 |-------|-------------|-------------|
-| `training-monitor` | Core monitoring procedure. Single-agent executes the full pipeline for one job, spawns a reviewer sub-agent for audit. | Yes |
+| `training-supervisor` | Core monitoring procedure. Single-agent executes the full pipeline for one job, spawns a reviewer sub-agent for audit. | Yes |
 | `grpo-monitor` | GRPO/RL training: reward, KL, entropy, generation quality, phase time balance. | Yes |
 | `distributed-monitor` | Multi-GPU/multi-process: NCCL, process hierarchy, straggler detection. | Yes |
 | `k8s-monitor` | Kubernetes: kubectl collection, pod anomalies, scheduling escalation ladder. | Yes |
 | `wandb-monitor` | W&B monitoring: heartbeat stall detection, metric key variations, health thresholds, run comparison. | Yes |
-| `monitor-team` | Cron-based team monitoring loop. Creates a fresh teammate each cycle to run training-monitor. Collects user preferences (target, mode, frequency, authority, team conflict) at setup. | Yes |
-| `monitor-doctor` | Interactive setup wizard. Detects environment, checks dependencies, installs missing ones. | Yes |
+| `supervisor-team` | Cron-based team monitoring loop. Creates a fresh teammate each cycle to run training-supervisor. Collects user preferences (target, mode, frequency, authority, team conflict) at setup. | Yes |
+| `supervisor-doctor` | Interactive setup wizard. Detects environment, checks dependencies, installs missing ones. | Yes |
 
 ## Agents
 
 | Agent | Spawned by | Purpose |
 |-------|------------|---------|
-| `quality-reviewer` | `training-monitor` executor | Sub-agent for adversarial process review. Checks reasoning process and logical coherence, spot-checks one load-bearing claim. |
+| `quality-reviewer` | `training-supervisor` executor | Sub-agent for adversarial process review. Checks reasoning process and logical coherence, spot-checks one load-bearing claim. |
 
 ## Step Files
 
@@ -45,14 +45,14 @@ The plugin works out of the box for single-GPU PyTorch training with log file ou
 | K8s monitoring | `kubectl` with cluster access | See [Kubernetes docs](https://kubernetes.io/docs/tasks/tools/) |
 | GPU monitoring (baseline) | `nvidia-smi` | Pre-installed on GPU machines |
 
-Run `/monitor-doctor` to check what is installed and install what is missing interactively.
+Run `/supervisor-doctor` to check what is installed and install what is missing interactively.
 
 ## Usage
 
 ### Monitor running training jobs
 
 ```
-/training-monitor
+/training-supervisor
 ```
 
 The executor will:
@@ -68,12 +68,12 @@ The executor will:
 ### Set up periodic monitoring with a team
 
 ```
-/monitor-team
+/supervisor-team
 ```
 
 The skill will ask for your preferences (what to monitor, work mode, frequency,
 authority level), then set up a cron-based loop that creates a fresh teammate
-each cycle to run `/training-monitor`.
+each cycle to run `/training-supervisor`.
 
 ### Use domain skills standalone
 

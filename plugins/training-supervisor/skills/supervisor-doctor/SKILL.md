@@ -1,11 +1,11 @@
 ---
-name: monitor-doctor
-description: Interactive setup wizard for the training-monitor plugin. Goal-driven — the agent determines which dependencies are needed by checking project context and asking the user only when the context is ambiguous. Installs missing dependencies and reports available capabilities.
+name: supervisor-doctor
+description: Interactive setup wizard for the training-supervisor plugin. Goal-driven — the agent determines which dependencies are needed by checking project context and asking the user only when the context is ambiguous. Installs missing dependencies and reports available capabilities.
 ---
 
 # Monitor Doctor
 
-Set up the training-monitor plugin for the user's environment. The goal is to determine which domain skills and external dependencies are needed, install what is missing, and report available capabilities.
+Set up the training-supervisor plugin for the user's environment. The goal is to determine which domain skills and external dependencies are needed, install what is missing, and report available capabilities.
 
 ## Goal
 
@@ -36,7 +36,7 @@ This is the complete list of domain skills and their external dependencies. The 
 
 | Skill | What it provides | External dependencies | Install commands |
 |-------|-----------------|----------------------|-----------------|
-| `training-monitor` | Core monitoring orchestrator | `nvidia-smi` | (pre-installed on GPU machines) |
+| `training-supervisor` | Core monitoring orchestrator | `nvidia-smi` | (pre-installed on GPU machines) |
 | `grpo-monitor` | RL metrics, generation quality, phase time | none | — |
 | `distributed-monitor` | NCCL diagnostics, process hierarchy, stragglers | none | — |
 | `k8s-monitor` | Pod anomalies, scheduling escalation | `kubectl` with cluster access | `curl -LO https://dl.k8s.io/release/$(curl -sL https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl && chmod +x kubectl && mv kubectl ~/.local/bin/` |
@@ -78,7 +78,7 @@ Monitor Doctor — Setup Complete
 Environment: [detected/stated training setup summary]
 
 Skills:
-  [OK]  training-monitor (core)
+  [OK]  training-supervisor (core)
   [OK/--]  grpo-monitor
   [OK/--]  distributed-monitor
   [OK/--]  k8s-monitor
@@ -101,12 +101,12 @@ Capabilities:
 
 Ask the user which monitoring mode to use (AskUserQuestion):
 
-**Team mode (`/monitor-team`)**:
+**Team mode (`/supervisor-team`)**:
 Each monitoring cycle creates a fresh teammate with clean context. The main agent
 only manages lifecycle (create, wait, shutdown). More robust context isolation
 but more complex architecture.
 
-**Ralph mode (`/monitor-ralph`)**:
+**Ralph mode (`/supervisor-ralph`)**:
 The main agent executes monitoring directly. Context stays clean via auto-compact
 between passes. Simpler architecture, easier user intervention, but requires
 auto-compact window configuration.
@@ -138,4 +138,4 @@ If the project has a `.claude/` directory, offer to save the environment profile
 }
 ```
 
-This allows `training-monitor` to automatically load the right domain skills in future sessions.
+This allows `training-supervisor` to automatically load the right domain skills in future sessions.

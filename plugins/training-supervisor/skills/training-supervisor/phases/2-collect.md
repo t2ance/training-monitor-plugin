@@ -29,7 +29,7 @@ Anomalies: [any GPU at idle power, memory >95%, unexpected processes]
 ### Log Collector
 
 ```bash
-tail -20 <log_file>
+tail <log_file>    # recent output -- adjust line count as needed for context
 ```
 
 Also extract: latest step number, latest metric values, any error/warning messages, timestamps.
@@ -64,8 +64,8 @@ Status: [ALIVE / DEAD / ZOMBIE]
 ### Resource Collector
 
 ```bash
-df -h <checkpoint_dir> | tail -1
-free -h | head -2
+df -h <checkpoint_dir>
+free -h
 ```
 
 Return format:
@@ -94,7 +94,7 @@ The main agent merges all collector outputs into a single evidence bundle. This 
 
 - For distributed training, load the `distributed-monitor` skill for multi-process PID management.
 - For K8s jobs, load the `k8s-monitor` skill for kubectl-based collection.
-- For W&B integration, the `wandb-primary` skill from `wandb/skills` is required. Use `monitor-doctor` to verify.
+- For W&B integration, the `wandb-primary` skill from `wandb/skills` is required. Use `supervisor-doctor` to verify.
 
 ## Gate Log Format
 

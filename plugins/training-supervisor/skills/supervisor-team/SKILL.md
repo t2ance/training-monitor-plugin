@@ -1,26 +1,26 @@
 ---
-name: monitor-team
-description: Cron-based team monitoring loop. Creates a fresh teammate each cycle to run training-monitor, then shuts it down. Team lead only manages lifecycle.
+name: supervisor-team
+description: Cron-based team monitoring loop. Creates a fresh teammate each cycle to run training-supervisor, then shuts it down. Team lead only manages lifecycle.
 ---
 
 # Monitor Team
 
 Orchestrates a periodic monitoring loop using teammates. Each cycle, the team lead
-creates a fresh teammate that executes one monitoring pass (using /training-monitor),
+creates a fresh teammate that executes one monitoring pass (using /training-supervisor),
 then terminates. The team lead does not interpret results or make decisions -- all
 autonomy belongs to the teammate.
 
 ## Execution Model
 
 ```
-cron trigger -> team lead creates teammate -> teammate runs /training-monitor once
+cron trigger -> team lead creates teammate -> teammate runs /training-supervisor once
 -> teammate exits -> team lead confirms shutdown -> wait for next trigger
 ```
 
 Roles:
 - **Team lead (you)**: lifecycle only -- create, wait, shutdown. No analysis,
   no reactions to report content.
-- **Teammate**: one-shot operator. Runs /training-monitor skill, then exits.
+- **Teammate**: one-shot operator. Runs /training-supervisor skill, then exits.
   Authority and behavior determined by user preferences collected at setup.
 
 ## CRITICAL: Team management and teammate creation
@@ -29,7 +29,7 @@ Roles:
 
 You can only lead **one team at a time**. Handle this as follows:
 
-1. **No team exists** → Use **TeamCreate** to create one (e.g., "training-monitor"),
+1. **No team exists** → Use **TeamCreate** to create one (e.g., "training-supervisor"),
    then spawn the teammate into it.
 2. **A team already exists AND was created by this skill** → **Reuse it.** Spawn
    the new teammate into the existing team by passing `team_name: <existing_team>`
@@ -110,7 +110,7 @@ include all of the following:
 
 **Always included (one-shot lifecycle):**
 > DISPATCH_MODE: team
-> Use the /training-monitor skill.
+> Use the /training-supervisor skill.
 > You are one step in a periodic monitoring loop controlled by the team lead.
 > The team lead creates a fresh instance of you every cycle. Your job is to
 > complete one monitoring pass, handle any issues you find, then exit. Do not
@@ -153,7 +153,7 @@ When the teammate completes, send it a shutdown request via SendMessage.
 
 ### Step 4: Trigger first cycle immediately
 
-If no team exists yet, use **TeamCreate** to create one (e.g., "training-monitor").
+If no team exists yet, use **TeamCreate** to create one (e.g., "training-supervisor").
 Then use the **Agent tool** to spawn the first teammate right away (with
 `team_name`, mode dontAsk, run_in_background true, and instructions from Step 2).
 Do not wait for the first cron tick.
@@ -172,4 +172,4 @@ set to your existing team. Do NOT attempt to create a new team -- reuse the
 existing one. If the team was deleted between cycles, create a new one first
 with TeamCreate. Each monitoring cycle is independent. No state is carried in
 context -- cross-session state lives in `monitoring-logs/jobs/*.json` (managed
-by /training-monitor inside the teammate).
+by /training-supervisor inside the teammate).

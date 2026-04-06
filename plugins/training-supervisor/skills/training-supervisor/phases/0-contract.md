@@ -2,11 +2,11 @@
 
 ## Goal
 
-Two things happen in this phase: (1) discover what we're monitoring, and (2) agree with the reviewer on what this pass will focus on.
+Two things happen in this phase: (1) discover what we're supervising, and (2) agree with the reviewer on what this pass will focus on.
 
 ## Job Discovery
 
-Before writing any contract, establish WHAT we are monitoring.
+Before writing any contract, establish WHAT we are supervising.
 
 ### Subsequent sessions (per-job state exists)
 
@@ -72,7 +72,7 @@ If first session (no prior state): focus areas come from the training config and
 
 ### Acceptance Criteria
 
-What must the monitoring report contain for the reviewer to APPROVE:
+What must the supervision report contain for the reviewer to APPROVE:
 
 - Which evidence sources MUST be checked (e.g., "must verify GPU 3 status -- it showed anomalies last session")
 - Which domain skills MUST be loaded (e.g., "GRPO training -- grpo-monitor required")
@@ -80,12 +80,12 @@ What must the monitoring report contain for the reviewer to APPROVE:
 
 ### Pass Definition
 
-What counts as a "complete" monitoring pass:
+What counts as a "complete" supervision pass:
 
-- All 5 evidence categories collected (GPU, logs, processes, resources, domain)
-- Key progress indicator derived and assessed
+- All relevant evidence categories collected (GPU, logs, processes, resources, domain as applicable)
+- Metric trajectories described qualitatively
+- Holistic judgment made: CONTINUE or STOP
 - Comparison against predictions completed
-- Status assigned with articulated reasoning
 
 ## Negotiation
 
@@ -100,8 +100,8 @@ Dispatch determines the mechanism (Team multi-round vs Agent single-round). Rega
 ## First Session
 
 If no per-job state exists:
-- Focus areas: "Initial assessment -- derive criteria from training config, establish baseline"
-- Acceptance criteria: "Must read training config, identify key progress indicator, explain choice"
+- Focus areas: "Initial assessment -- understand what training is trying to achieve, observe current trajectory"
+- Acceptance criteria: "Must read training config, describe metric trajectories qualitatively, make a holistic judgment"
 - Pass definition: same as default
 
 ## Gate Log Format

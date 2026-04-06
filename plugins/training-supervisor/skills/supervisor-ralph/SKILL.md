@@ -1,19 +1,19 @@
 ---
-name: monitor-ralph
-description: Cron-based monitoring loop using main agent directly. Each cycle the main agent executes /training-monitor itself. Context stays clean via auto-compact with monitoring-aware PreCompact instructions. Simpler alternative to monitor-team.
+name: supervisor-ralph
+description: Cron-based monitoring loop using main agent directly. Each cycle the main agent executes /training-supervisor itself. Context stays clean via auto-compact with monitoring-aware PreCompact instructions. Simpler alternative to supervisor-team.
 ---
 
 # Monitor Ralph
 
 Orchestrates a periodic monitoring loop where the main agent directly executes
-the training-monitor skill each cycle. Unlike monitor-team (which delegates to
+the training-supervisor skill each cycle. Unlike supervisor-team (which delegates to
 teammates), this mode runs everything in the main agent's context. Context
 management relies on auto-compact with a PreCompact hook that preserves
 monitoring state across compaction boundaries.
 
-## When to Use This vs monitor-team
+## When to Use This vs supervisor-team
 
-| Concern | monitor-ralph | monitor-team |
+| Concern | supervisor-ralph | supervisor-team |
 |---------|--------------|--------------|
 | Context isolation | Approximate (auto-compact) | Full (fresh teammate) |
 | Architecture complexity | Low (no team management) | High (create/shutdown teammates) |
@@ -66,7 +66,7 @@ The cron prompt tells you (main agent) what to do each cycle. It should contain:
 1. The monitoring target from Q1.
 2. Work mode instructions from Q2.
 3. Authority level from Q4.
-4. `DISPATCH_MODE: ralph` and a reminder to use the /training-monitor skill.
+4. `DISPATCH_MODE: ralph` and a reminder to use the /training-supervisor skill.
 
 Example cron prompt:
 ```
@@ -75,7 +75,7 @@ You are monitoring [target from Q1].
 [Authority instruction from Q4]
 
 DISPATCH_MODE: ralph
-Use the /training-monitor skill to execute one complete monitoring pass.
+Use the /training-supervisor skill to execute one complete monitoring pass.
 All cross-session state is in monitoring-logs/jobs/ -- read it first.
 When the pass is complete, stop and wait for the next cron trigger.
 ```
@@ -96,21 +96,21 @@ If not set, inform the user:
 
 ### Step 4: Trigger first cycle immediately
 
-Execute the /training-monitor skill directly with DISPATCH_MODE: ralph.
+Execute the /training-supervisor skill directly with DISPATCH_MODE: ralph.
 Do not wait for the first cron tick. This validates the setup end-to-end.
 
 ### Step 5: Ongoing operation
 
-Each cron trigger executes the /training-monitor skill in your (main agent)
+Each cron trigger executes the /training-supervisor skill in your (main agent)
 context. Between passes, auto-compact fires and compresses the previous pass
 into a recovery-oriented summary (handled by the PreCompact hook).
 
 The monitoring loop is:
 ```
-cron fires -> read job state from monitoring-logs/jobs/ -> run /training-monitor
+cron fires -> read job state from monitoring-logs/jobs/ -> run /training-supervisor
 -> gate logs written at each step -> pass completes -> wait for next cron
 -> auto-compact fires (between passes) -> summary preserves recovery context
--> next cron fires -> read summary + job state -> run /training-monitor -> ...
+-> next cron fires -> read summary + job state -> run /training-supervisor -> ...
 ```
 
 If auto-compact fires mid-pass (because the pass exceeded the window):
