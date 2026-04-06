@@ -1,56 +1,8 @@
 # Training Monitor Plugin
 
-Prediction-first monitoring for ML/DL training jobs. Single-agent execution with reviewer sub-agent. Derives judgment criteria from training artifacts, not hardcoded rules.
+Prediction-first monitoring for ML/DL training jobs. Phase-based execution with procedure/dispatch separation. Derives judgment criteria from training artifacts, not hardcoded rules.
 
-## Installation
-
-### Via CLI (recommended)
-
-```bash
-# Add the marketplace and install
-claude plugin marketplace add t2ance/training-monitor-plugin
-claude plugin install training-monitor@training-monitor
-```
-
-### Via settings.json
-
-Add these to `~/.claude/settings.json`:
-
-```json
-{
-  "extraKnownMarketplaces": {
-    "training-monitor": {
-      "source": {
-        "source": "github",
-        "repo": "t2ance/training-monitor-plugin"
-      }
-    }
-  },
-  "enabledPlugins": {
-    "training-monitor@training-monitor": true
-  }
-}
-```
-
-Restart Claude Code to pull the plugin.
-
-## Update
-
-```bash
-claude plugin update training-monitor
-```
-
-Restart Claude Code to activate the new version. Or use `/reload-plugins` to hot-reload without restarting the session.
-
-### Setup
-
-After installation, run the interactive setup wizard:
-
-```
-/monitor-doctor
-```
-
-It will detect your training environment, check dependencies, and offer to install what is missing.
+For installation and update instructions, see the [top-level README](../../README.md).
 
 ## Skills
 
