@@ -1,6 +1,6 @@
-# Step 1: Write Predictions
+# Phase 1: Predict
 
-Write predictions for EVERY running job based on previous checks and training config. This MUST happen before any tool calls.
+Write predictions for the job based on previous checks and training config. This MUST happen before any evidence collection (tool calls that read training data).
 
 ## Prediction Template
 
@@ -16,8 +16,11 @@ PREDICTIONS (written before reading any data):
 - Expected phase: [init / forward / backward / optimizer / checkpoint / eval / idle]
 - Expected key metrics: [loss/reward range based on trend from previous steps]
 - Risk factors: [what could go wrong given current state]
+- Contract focus: [what the contract says to watch for this pass]
 ---
 ```
+
+The last line links predictions to the contract -- predict what you expect to see regarding the contract's focus areas.
 
 ## GPU Power as Primary Utilization Indicator
 
@@ -40,3 +43,10 @@ Real utilization = (actual_power - idle_power) / (TDP - idle_power)
 | Heavy training (backward pass) | 250-400W | High utilization, this is the useful work |
 | Light inference (generation) | 80-150W | Normal for autoregressive generation |
 | Idle / waiting | 60-70W | No useful work happening |
+
+## Gate Log Format
+
+Record in `monitoring-logs/<timestamp>/1-predict.md`:
+- All predictions
+- Basis for each prediction (previous data, config, or first-session reasoning)
+- Contract focus areas addressed

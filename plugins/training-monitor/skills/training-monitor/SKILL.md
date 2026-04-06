@@ -1,6 +1,6 @@
 ---
 name: training-monitor
-description: Prediction-first monitoring for ML/DL training jobs. Single-agent execution with reviewer sub-agent. Derives judgment criteria from training artifacts, not hardcoded rules.
+description: Prediction-first monitoring for ML/DL training jobs. Phase-based execution with separated procedure and dispatch. Derives judgment criteria from training artifacts, not hardcoded rules.
 ---
 
 # Training Monitor
@@ -13,6 +13,15 @@ You are monitoring **one training job**. Execute this entire procedure from star
 2. **Forced articulation**: no status label without written reasoning that supports it.
 3. **Derived criteria**: judge by the training's OWN artifacts (config, logged metrics, objective), not hardcoded thresholds.
 4. **"Process alive + GPU busy" is never evidence of progress.**
+5. **Contract-driven**: each pass starts with an explicit agreement on focus and acceptance criteria.
+
+## Dispatch
+
+This procedure describes WHAT each phase does, not HOW to orchestrate agents. Before starting, read the dispatch file specified by your invoking skill:
+- Ralph mode: [dispatch/ralph.md](dispatch/ralph.md)
+- Team mode: [dispatch/team.md](dispatch/team.md)
+
+The dispatch file tells you how to spawn collectors, communicate with the reviewer, and manage agent lifecycle for each phase.
 
 ## State Protocol
 
@@ -23,165 +32,172 @@ All cross-session information is stored in files, not in context.
 | Read previous state | `monitoring-logs/jobs/<job-id>.json` |
 | Write current state | `monitoring-logs/jobs/<job-id>.json` |
 | Session logs | `monitoring-logs/<timestamp>/` |
+| Global pitfalls | `monitoring-logs/pitfalls.md` |
 
 Job ID = training config path + model path (stable across restarts). PIDs are NOT stable identifiers.
 
 Per-job state uses namespace isolation:
 - `meta`: job identifier, last updated, session count
-- `monitor`: derived criteria, status history, user guidance
+- `monitor`: derived criteria, status history, user guidance, learnings (job-specific pitfalls)
 - `strategy`: decisions, hypotheses, outcomes, evaluate_after
 
 ## Anti-Skip Protocol
 
-Before starting any work, create a task for EVERY step:
+Before starting any work, create a task for EVERY phase:
 
 ```
-TaskCreate: "Step 1: Setup + Predictions"
-TaskCreate: "Step 2: Collect Evidence"
-TaskCreate: "Step 3: Compare Predictions vs Actuals"
-TaskCreate: "Step 4: Analyze Metrics"
-TaskCreate: "Step 5: Check Resources"
-TaskCreate: "Step 6: Reviewer Audit"
-TaskCreate: "Step 7: Troubleshoot (if needed)"
-TaskCreate: "Step 8: Strategize"
-TaskCreate: "Step 9: Write State"
+TaskCreate: "Phase 0: Contract"
+TaskCreate: "Phase 1: Predict"
+TaskCreate: "Phase 2: Collect"
+TaskCreate: "Phase 3: Analyze"
+TaskCreate: "Phase 4: Audit"
+TaskCreate: "Phase 5: Act"
+TaskCreate: "Phase 6: Persist"
 ```
 
 Mark each task `in_progress` when starting, `completed` when the gate log is written.
 
 ## Procedure
 
-### Step 1: Setup + Predictions
+### Phase 0: Contract
 
-TaskUpdate: Step 1 -> in_progress
+TaskUpdate: Phase 0 -> in_progress
+
+Establish agreement with the reviewer on this pass's focus and acceptance criteria before any evidence is collected.
 
 1. Read per-job state file if it exists (previous session's criteria, history, decisions).
-2. Read pitfalls: `monitoring-logs/pitfalls.md` (global) and `monitor.learnings` from per-job state (job-specific). Keep these in mind throughout the pass — they are mistakes from previous sessions that should not be repeated.
-3. Create session log directory: `monitoring-logs/<timestamp>/` (format: `YYYY-MM-DD_HHMMSS`).
-4. Write predictions for this job **before reading any training evidence** (logs, GPU metrics, dashboards).
-   - If per-job state exists: base predictions on previous session's values.
-   - If first session: base predictions on training config and general knowledge.
-   - Reference: [steps/1-predict.md](steps/1-predict.md)
-5. **Gate**: write `monitoring-logs/<timestamp>/1-predict.md`
+2. Read pitfalls: `monitoring-logs/pitfalls.md` (global) and `monitor.learnings` from per-job state (job-specific).
+3. Write a contract proposal based on state + pitfalls.
+4. Send to reviewer for review/negotiation (dispatch determines mechanism).
+5. Reach agreement.
 
-TaskUpdate: Step 1 -> completed
+Reference: [phases/0-contract.md](phases/0-contract.md)
 
-### Step 2: Collect Evidence
+**Gate**: write `monitoring-logs/<timestamp>/0-contract.md`
 
-TaskUpdate: Step 2 -> in_progress
+TaskUpdate: Phase 0 -> completed
 
-Run ALL evidence collection commands in parallel.
-Reference: [steps/2-collect.md](steps/2-collect.md)
+### Phase 1: Predict
+
+TaskUpdate: Phase 1 -> in_progress
+
+Write predictions **before reading any training evidence** (logs, GPU metrics, dashboards).
+- If per-job state exists: base predictions on previous session's values.
+- If first session: base predictions on training config and general knowledge.
+- Predictions must address the focus areas defined in the contract.
+
+Reference: [phases/1-predict.md](phases/1-predict.md)
+
+**Gate**: write `monitoring-logs/<timestamp>/1-predict.md`
+
+TaskUpdate: Phase 1 -> completed
+
+### Phase 2: Collect
+
+TaskUpdate: Phase 2 -> in_progress
+
+Dispatch collectors to gather evidence. Five categories:
+- **GPU**: power, memory, utilization, processes
+- **Logs**: recent training output, metrics, errors
+- **Processes**: alive/dead, PID tree, distributed processes
+- **Resources**: disk, CPU memory, network
+- **Domain**: W&B heartbeat, K8s pod status, etc. (conditional on profile)
+
+Dispatch determines how many collectors and whether they run in parallel.
+Each collector returns a structured evidence section.
+Main agent merges results into a single evidence bundle.
+
+Reference: [phases/2-collect.md](phases/2-collect.md)
 
 **Gate**: write `monitoring-logs/<timestamp>/2-collect.md`
 
-TaskUpdate: Step 2 -> completed
+TaskUpdate: Phase 2 -> completed
 
-### Step 3: Compare Predictions vs Actuals
+### Phase 3: Analyze
 
-TaskUpdate: Step 3 -> in_progress
+TaskUpdate: Phase 3 -> in_progress
 
-Build comparison table. Flag deviations that would change your health assessment.
-Reference: [steps/3-compare.md](steps/3-compare.md)
+Core judgment work by the main agent:
 
-**Gate**: write `monitoring-logs/<timestamp>/3-compare.md`
+1. Compare predictions vs evidence (comparison table, deviation flags).
+2. Cross-source validation (when sources disagree, find which is wrong).
+3. Derive judgment criteria from training artifacts.
+4. Load domain skills when conditions match (MANDATORY load, not mandatory follow):
+   - `grpo-monitor`: GRPO, PPO, or other RL algorithms
+   - `distributed-monitor`: multiple GPUs or processes
+   - `k8s-monitor`: Kubernetes
+   - `wandb-monitor`: Weights & Biases logging
+5. Assess status with articulated reasoning.
 
-TaskUpdate: Step 3 -> completed
+Reference: [phases/3-analyze.md](phases/3-analyze.md)
 
-### Step 4: Analyze Metrics
+**Gate**: write `monitoring-logs/<timestamp>/3-analyze.md`
 
-TaskUpdate: Step 4 -> in_progress
+TaskUpdate: Phase 3 -> completed
 
-Derive judgment criteria from the training's own artifacts. Assess health with articulated reasoning.
-Reference: [steps/4-metrics.md](steps/4-metrics.md)
+### Phase 4: Audit
 
-Load domain skills when the condition matches (MANDATORY -- loading required, following blindly not):
+TaskUpdate: Phase 4 -> in_progress
 
-| Skill | When to load |
-|-------|-------------|
-| `grpo-monitor` | GRPO, PPO, or other RL algorithms |
-| `distributed-monitor` | Multiple GPUs or processes |
-| `k8s-monitor` | Kubernetes |
-| `wandb-monitor` | Weights & Biases logging |
+Reviewer audits your work from Phases 0-3. Checks against **contract** AND **process compliance**.
 
-**Gate**: write `monitoring-logs/<timestamp>/4-metrics.md`
+Send the reviewer:
+- The contract from Phase 0
+- Gate logs from Phases 1-3
+- Your monitoring report and status assessment
 
-TaskUpdate: Step 4 -> completed
+Dispatch determines communication mechanism (Team multi-round vs Agent single-round).
 
-### Step 5: Check Resources
+If REJECTED: revise flagged issues and resubmit. Maximum 2 rounds.
+Reviewer may extract pitfalls (tagged global/job-specific) -- collect these for Phase 6.
 
-TaskUpdate: Step 5 -> in_progress
+Reference: [phases/4-audit.md](phases/4-audit.md)
 
-Reference: [steps/5-resources.md](steps/5-resources.md)
+**Gate**: write `monitoring-logs/<timestamp>/4-audit.md`
 
-**Gate**: write `monitoring-logs/<timestamp>/5-resources.md`
+TaskUpdate: Phase 4 -> completed
 
-TaskUpdate: Step 5 -> completed
+### Phase 5: Act
 
-### Step 6: Reviewer Audit
+TaskUpdate: Phase 5 -> in_progress
 
-TaskUpdate: Step 6 -> in_progress
+Two sub-phases:
 
-Spawn a **sub-agent** to adversarially review your work from Steps 1-5. The reviewer checks PROCESS, not domain content.
+**5a. Troubleshoot** (conditional)
+- Skip if: status is HEALTHY, or WARNING with no specific anomalies.
+- Trigger if: status is CRITICAL, OR specific anomalies found in Phases 2-3.
+- Dispatch a troubleshooter sub-agent for systematic investigation.
 
-Send the sub-agent:
-- Your gate logs from Steps 1-5
-- The reviewer checklist: read `agents/quality-reviewer.md`
+**5b. Strategize** (always)
+- HEALTHY: optional efficiency suggestions (lightweight, no full hypothesis structure).
+- WARNING/CRITICAL/UNCERTAIN: 3 full hypotheses with falsifiable predictions.
+- Present options to user via AskUserQuestion. After user choice, generate execution plan.
 
-If REJECTED: revise the flagged issues and resubmit. Maximum 2 rounds.
+Reference: [phases/5-act.md](phases/5-act.md)
 
-Reference: [steps/6-review.md](steps/6-review.md)
+**Gate**: write `monitoring-logs/<timestamp>/5-act.md`
 
-**Gate**: write `monitoring-logs/<timestamp>/6-review.md`
+TaskUpdate: Phase 5 -> completed
 
-TaskUpdate: Step 6 -> completed
+### Phase 6: Persist
 
-### Step 7: Troubleshoot (conditional)
-
-**Skip if**: status is HEALTHY, or WARNING with no specific anomalies.
-**Trigger if**: status is CRITICAL, OR specific anomalies or deviations were found in Steps 2-5.
-
-TaskUpdate: Step 7 -> in_progress
-
-Investigate the anomaly systematically: observe with numbers, reproduce, isolate root cause, propose concrete action.
-Reference: [steps/7-troubleshoot.md](steps/7-troubleshoot.md)
-
-**Gate**: write `monitoring-logs/<timestamp>/7-troubleshoot.md`
-
-TaskUpdate: Step 7 -> completed
-
-### Step 8: Strategize
-
-TaskUpdate: Step 8 -> in_progress
-
-Propose next-step hypotheses based on monitoring results. This step triggers on ALL statuses:
-- HEALTHY: optional efficiency suggestions (lightweight, no full hypothesis structure required)
-- WARNING/CRITICAL/UNCERTAIN: 3 full hypotheses with falsifiable predictions
-
-Present options to user via AskUserQuestion. After user choice, generate execution plan.
-Reference: [steps/8-strategy.md](steps/8-strategy.md)
-
-**Gate**: write `monitoring-logs/<timestamp>/8-strategy.md`
-
-TaskUpdate: Step 8 -> completed
-
-### Step 9: Write State
-
-TaskUpdate: Step 9 -> in_progress
+TaskUpdate: Phase 6 -> in_progress
 
 Update per-job state file (`monitoring-logs/jobs/<job-id>.json`):
 - `meta`: job identifier, last updated timestamp, session count
-- `monitor`: derived criteria, current status, status history, learnings (job-specific pitfalls from reviewer)
+- `monitor`: derived criteria, current status, status history, learnings
 - `strategy`: chosen hypothesis, execution plan, success/failure criteria, evaluate_after timestamp
 
-Write pitfalls from Step 6 reviewer (if any):
-- `[global]` pitfalls: append to `monitoring-logs/pitfalls.md` (create if doesn't exist). One line per pitfall, prefixed with session timestamp.
+Write pitfalls from Phase 4 reviewer (if any):
+- `[global]` pitfalls: append to `monitoring-logs/pitfalls.md`. One line per pitfall, prefixed with session timestamp.
 - `[job-specific]` pitfalls: append to `monitor.learnings` array in per-job state file.
-- Deduplicate: before appending, check if a semantically equivalent pitfall already exists. Skip if so.
+- Deduplicate: before appending, check if a semantically equivalent pitfall already exists.
 
-**Gate**: write `monitoring-logs/<timestamp>/9-summary.md`
+Reference: [phases/6-persist.md](phases/6-persist.md)
 
-TaskUpdate: Step 9 -> completed
+**Gate**: write `monitoring-logs/<timestamp>/6-summary.md`
+
+TaskUpdate: Phase 6 -> completed
 
 ## Judgment Standard
 
@@ -198,7 +214,7 @@ TaskUpdate: Step 9 -> completed
 - NEVER assign a status without written reasoning.
 - WARNING requires the full process. It means "I looked and found no progress."
 - Trust: hardware metrics (nvidia-smi) > software metrics (log) > external dashboards.
-- Every step must write its gate log with substantive content before proceeding.
-- Do not use efficiency, speed, or brevity as justification for skipping any step.
+- Every phase must write its gate log with substantive content before proceeding.
+- Do not use efficiency, speed, or brevity as justification for skipping any phase.
 - If anomaly detected, investigate NOW. Do not defer.
 - Report ALL GPUs, not just the ones you expect busy.
