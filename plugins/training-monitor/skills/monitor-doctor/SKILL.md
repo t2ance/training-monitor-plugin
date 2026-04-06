@@ -116,7 +116,7 @@ If the user selects Ralph mode:
 1. Check if `CLAUDE_CODE_AUTO_COMPACT_WINDOW` is set in the current session.
    If not, instruct the user to restart Claude Code with:
    ```
-   CLAUDE_CODE_AUTO_COMPACT_WINDOW=200000 claude
+   CLAUDE_CODE_AUTO_COMPACT_WINDOW=100000 claude
    ```
    This only affects the current session. Do NOT suggest adding it to shell
    profile -- it would degrade non-monitoring sessions.

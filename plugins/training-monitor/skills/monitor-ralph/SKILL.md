@@ -23,12 +23,12 @@ monitoring state across compaction boundaries.
 ## Prerequisites
 
 Start the Claude Code session with a reduced auto-compact window so compaction
-fires between monitoring passes rather than after 5-6 accumulated passes. A
-single pass typically uses under 150K tokens, so 200K ensures compaction fires
-after each pass:
+fires frequently, preventing context rot from accumulated passes. 100K keeps
+the context lean -- if a pass exceeds this, the PreCompact hook and gate logs
+handle mid-pass recovery:
 
 ```bash
-CLAUDE_CODE_AUTO_COMPACT_WINDOW=200000 claude
+CLAUDE_CODE_AUTO_COMPACT_WINDOW=100000 claude
 ```
 
 This only affects the current session. Do NOT set it globally in your shell
@@ -89,9 +89,8 @@ echo $CLAUDE_CODE_AUTO_COMPACT_WINDOW
 
 If not set, inform the user:
 > Auto-compact window is not configured. For Ralph mode, set it to at least
-> 200000 (200K tokens) so compaction fires between monitoring passes, not
-> during them:
-> `export CLAUDE_CODE_AUTO_COMPACT_WINDOW=200000`
+> 100000 (100K tokens) to keep context lean:
+> `CLAUDE_CODE_AUTO_COMPACT_WINDOW=100000 claude`
 > Add this to your shell profile for persistence.
 
 ### Step 4: Trigger first cycle immediately
