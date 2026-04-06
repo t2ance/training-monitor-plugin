@@ -66,7 +66,7 @@ The cron prompt tells you (main agent) what to do each cycle. It should contain:
 1. The monitoring target from Q1.
 2. Work mode instructions from Q2.
 3. Authority level from Q4.
-4. A reminder to use the /training-monitor skill with `dispatch/ralph.md`.
+4. `DISPATCH_MODE: ralph` and a reminder to use the /training-monitor skill.
 
 Example cron prompt:
 ```
@@ -74,8 +74,8 @@ You are monitoring [target from Q1].
 [Work mode instruction from Q2]
 [Authority instruction from Q4]
 
+DISPATCH_MODE: ralph
 Use the /training-monitor skill to execute one complete monitoring pass.
-Read dispatch/ralph.md first for orchestration instructions.
 All cross-session state is in monitoring-logs/jobs/ -- read it first.
 When the pass is complete, stop and wait for the next cron trigger.
 ```
@@ -96,9 +96,8 @@ If not set, inform the user:
 
 ### Step 4: Trigger first cycle immediately
 
-Execute the /training-monitor skill directly, using `dispatch/ralph.md` for
-orchestration. Do not wait for the first cron tick. This validates the setup
-end-to-end.
+Execute the /training-monitor skill directly with DISPATCH_MODE: ralph.
+Do not wait for the first cron tick. This validates the setup end-to-end.
 
 ### Step 5: Ongoing operation
 

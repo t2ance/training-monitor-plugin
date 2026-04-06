@@ -109,8 +109,8 @@ include all of the following:
   processes and change training config at your own judgment."
 
 **Always included (one-shot lifecycle):**
-> Use the /training-monitor skill. Read dispatch/team.md first for orchestration
-> instructions.
+> DISPATCH_MODE: team
+> Use the /training-monitor skill.
 > You are one step in a periodic monitoring loop controlled by the team lead.
 > The team lead creates a fresh instance of you every cycle. Your job is to
 > complete one monitoring pass, handle any issues you find, then exit. Do not

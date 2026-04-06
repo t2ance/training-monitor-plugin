@@ -17,11 +17,15 @@ You are monitoring **one training job**. Execute this entire procedure from star
 
 ## Dispatch
 
-This procedure describes WHAT each phase does, not HOW to orchestrate agents. Before starting, **you MUST read the dispatch file** specified by your invoking skill:
-- Ralph mode: [dispatch/ralph.md](dispatch/ralph.md)
-- Team mode: [dispatch/team.md](dispatch/team.md)
+This procedure describes WHAT each phase does, not HOW to orchestrate agents.
 
-The dispatch file tells you how to spawn collectors, communicate with the reviewer, and manage agent lifecycle for each phase. **Do not proceed to Phase 0 until you have read the dispatch file.**
+**Your invoking context MUST have told you which dispatch mode to use.** Look for one of these in your prompt:
+- `DISPATCH_MODE: ralph` → read [dispatch/ralph.md](dispatch/ralph.md)
+- `DISPATCH_MODE: team` → read [dispatch/team.md](dispatch/team.md)
+
+If you do not see a `DISPATCH_MODE` instruction, default to `team` (safest — no Team features required).
+
+**You MUST read the dispatch file before Phase 0.** The dispatch file tells you how to spawn collectors, communicate with the reviewer, and manage agent lifecycle.
 
 ## Mandatory Delegation Rules
 
